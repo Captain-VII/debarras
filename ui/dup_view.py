@@ -206,7 +206,7 @@ class DupView(QWidget):
         # QProgressBar est en int 32 bits : on travaille en pour mille.
         self.progress.setRange(0, 1000)
         self.progress.setValue(int(1000 * done / total) if total else 0)
-        if phase == "Hash complet":
+        if phase in ("Hash complet", "Comparaison du contenu"):  # progression en octets
             self.info.setText(f"{phase} : {human_size(done)} / {human_size(total)}")
         else:
             self.info.setText(f"{phase} : {human_count(done)} / {human_count(total)}")
@@ -332,6 +332,8 @@ class DupView(QWidget):
             files = [(k, k.data(0, FILE_ROLE)) for k in kids]
             if rule == "resolution":  # images : meilleure définition, puis plus lourde, puis récente
                 return max(files, key=lambda kf: (kf[1].pixels, kf[1].size, kf[1].mtime))[0]
+            if rule == "largest":
+                return max(files, key=lambda kf: (kf[1].size, kf[1].mtime))[0]
             if rule == "newest":
                 return max(files, key=lambda kf: (kf[1].mtime, -len(kf[1].path)))[0]
             if rule == "oldest":

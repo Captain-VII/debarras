@@ -21,6 +21,33 @@ CHUNK = 1 << 20
 _CLOUD_ATTRS = 0x1000 | 0x40000 | 0x400000  # OFFLINE | RECALL_ON_OPEN | RECALL_ON_DATA_ACCESS
 
 
+def xxh_file(path: str, limit: int | None = None, stop=lambda: False,
+             on_read=None) -> tuple[str | None, int]:
+    """xxh3-128 des `limit` premiers octets (ou du fichier entier) -> (empreinte, octets lus).
+
+    Empreinte None si `stop()` devient vrai en cours de lecture. Lève OSError si illisible.
+    Format partagé par les doublons et « même nom » (colonnes partial_hash / full_hash du cache).
+    """
+    h = xxhash.xxh3_128()
+    read = 0
+    with open(path, "rb", buffering=0) as f:
+        while True:
+            want = CHUNK if limit is None else min(CHUNK, limit - read)
+            if want <= 0:
+                break
+            block = f.read(want)
+            if not block:
+                break
+            h.update(block)
+            read += len(block)
+            if limit is None:
+                if stop():
+                    return None, read
+                if on_read:
+                    on_read(read)
+    return h.hexdigest(), read
+
+
 def is_cloud_only(st: os.stat_result) -> bool:
     """Fichier « en ligne uniquement » (OneDrive, Proton Drive…) : le lire le téléchargerait."""
     return bool(getattr(st, "st_file_attributes", 0) & _CLOUD_ATTRS)
@@ -200,29 +227,17 @@ class DuplicateFinder(QThread):
     def _hash(self, c: _Cand, limit: int | None, res: DupResult,
               done: int = 0, total: int = 0) -> str | None:
         """xxh3-128 des `limit` premiers octets (ou du fichier entier)."""
-        h = xxhash.xxh3_128()
-        read = 0
         try:
-            with open(c.path, "rb", buffering=0) as f:
-                while True:
-                    want = CHUNK if limit is None else min(CHUNK, limit - read)
-                    if want <= 0:
-                        break
-                    block = f.read(want)
-                    if not block:
-                        break
-                    h.update(block)
-                    read += len(block)
-                    if limit is None:
-                        if self.isInterruptionRequested():
-                            return None
-                        self._emit("Hash complet", done + read, total)
+            digest, read = xxh_file(c.path, limit, self.isInterruptionRequested,
+                                    lambda n: self._emit("Hash complet", done + n, total))
         except OSError:
             res.skipped_error += 1
             return None
+        if digest is None:
+            return None
         res.hashed_bytes += read
         c.dirty = True
-        return h.hexdigest()
+        return digest
 
     @staticmethod
     def _save(cache: Cache, cands: list[_Cand]) -> None:

@@ -10,7 +10,7 @@ from ui.main_window import MainWindow
 from ui.settings import Settings, apply_theme
 
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 
 def resource_path(rel: str) -> str:
