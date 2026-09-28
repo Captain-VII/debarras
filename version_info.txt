@@ -1,14 +1,14 @@
 # Métadonnées Windows de l'exe (Propriétés > Détails)
 VSVersionInfo(
-  ffi=FixedFileInfo(filevers=(1, 0, 0, 0), prodvers=(1, 0, 0, 0), mask=0x3f, flags=0x0,
+  ffi=FixedFileInfo(filevers=(1, 1, 0, 0), prodvers=(1, 1, 0, 0), mask=0x3f, flags=0x0,
                     OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[
     StringFileInfo([StringTable('040C04B0', [
-      StringStruct('FileDescription', 'Analyseur de fichiers'),
-      StringStruct('ProductName', 'Analyseur de fichiers'),
-      StringStruct('FileVersion', '1.0.0'),
-      StringStruct('ProductVersion', '1.0.0'),
-      StringStruct('OriginalFilename', 'AnalyseurFichiers.exe'),
+      StringStruct('FileDescription', 'Débarras — analyse et nettoyage de disque'),
+      StringStruct('ProductName', 'Débarras'),
+      StringStruct('FileVersion', '1.1.0'),
+      StringStruct('ProductVersion', '1.1.0'),
+      StringStruct('OriginalFilename', 'Debarras.exe'),
     ])]),
     VarFileInfo([VarStruct('Translation', [0x040C, 1200])]),
   ]

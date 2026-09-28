@@ -111,7 +111,7 @@ def write_html_report(path: str, d: ReportData) -> None:
 
     parts: list[str] = []
     add = parts.append
-    add(f"<h1>Rapport d'analyse — {_e(s.root)}</h1>")
+    add(f"<h1>Débarras — {_e(s.root)}</h1>")
     add(f'<p class="muted">Scan du {_e(human_date(s.finished))} — rapport généré le '
         f'{_e(human_date(datetime.now().timestamp()))}</p>')
 
@@ -185,7 +185,7 @@ def write_html_report(path: str, d: ReportData) -> None:
 
     doc = (f'<!doctype html><html lang="fr"><head><meta charset="utf-8">'
            f'<meta name="viewport" content="width=device-width, initial-scale=1">'
-           f"<title>Rapport — {_e(os.path.basename(s.root.rstrip(os.sep)) or s.root)}</title>"
+           f"<title>Débarras — {_e(os.path.basename(s.root.rstrip(os.sep)) or s.root)}</title>"
            f"<style>{_CSS}</style></head><body><main>{''.join(parts)}</main></body></html>")
     with open(path, "w", encoding="utf-8") as f:
         f.write(doc)

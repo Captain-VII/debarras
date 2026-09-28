@@ -172,3 +172,13 @@ def test_cache_queries(root, write, scan, cache):
     r2 = scan(root)
     cache.delete_scan(old)
     assert [s.id for s in cache.list_scans(str(root))] == [r2.scan_id]
+
+
+def test_data_folder_of_previous_version_is_taken_over(isolated_appdata):
+    from core.cache import default_db_path
+    old = isolated_appdata / "FileAnalyzer"
+    old.mkdir()
+    (old / "actions.jsonl").write_text("{}\n", encoding="utf-8")
+    path = default_db_path()
+    assert path.parent == isolated_appdata / "Debarras"
+    assert (path.parent / "actions.jsonl").exists() and not old.exists()

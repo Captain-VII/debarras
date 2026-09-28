@@ -149,9 +149,19 @@ class ScanInfo:
     errors: int
 
 
+APP_DIR = "Debarras"
+_OLD_APP_DIR = "FileAnalyzer"  # nom des premières versions
+
+
 def default_db_path() -> Path:
-    """%LOCALAPPDATA%\\FileAnalyzer\\cache.db"""
-    base = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "FileAnalyzer"
+    """%LOCALAPPDATA%\\Debarras\\cache.db (cache, journal et paramètres dans ce dossier)."""
+    local = Path(os.environ.get("LOCALAPPDATA", Path.home()))
+    base, old = local / APP_DIR, local / _OLD_APP_DIR
+    if not base.exists() and old.is_dir():
+        try:
+            old.rename(base)  # reprise des données de l'ancienne version
+        except OSError:
+            base = old        # dossier verrouillé : on continue avec l'ancien
     base.mkdir(parents=True, exist_ok=True)
     return base / "cache.db"
 

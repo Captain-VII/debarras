@@ -10,6 +10,9 @@ from ui.main_window import MainWindow
 from ui.settings import Settings, apply_theme
 
 
+__version__ = "1.1.0"
+
+
 def resource_path(rel: str) -> str:
     """Chemin d'une ressource, en développement comme dans l'exe PyInstaller."""
     base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
@@ -17,8 +20,13 @@ def resource_path(rel: str) -> str:
 
 
 def main() -> int:
+    if sys.platform == "win32":
+        # Icône propre dans la barre des tâches (sinon celle de python.exe en développement).
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Debarras.App")
     app = QApplication(sys.argv)
-    app.setApplicationName("Analyseur de fichiers")
+    app.setApplicationName("Débarras")
+    app.setApplicationVersion(__version__)
     app.setWindowIcon(QIcon(resource_path(os.path.join("assets", "icon.ico"))))
     # Boutons et dialogues standard de Qt en français (Oui/Non, Annuler…).
     translator = QTranslator(app)

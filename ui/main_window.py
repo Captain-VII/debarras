@@ -9,7 +9,7 @@ from PySide6.QtGui import (
     QAction, QActionGroup, QCloseEvent, QDesktopServices, QDragEnterEvent, QDropEvent, QKeySequence,
 )
 from PySide6.QtWidgets import (
-    QComboBox, QFileDialog, QHBoxLayout, QLabel, QMainWindow, QMessageBox,
+    QApplication, QComboBox, QFileDialog, QHBoxLayout, QLabel, QMainWindow, QMessageBox,
     QProgressBar, QPushButton, QTabWidget, QVBoxLayout, QWidget,
 )
 
@@ -33,7 +33,7 @@ from utils.format import human_count, human_date, human_duration, human_size
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Analyseur de fichiers")
+        self.setWindowTitle("Débarras")
         self.resize(1100, 720)
         self.setAcceptDrops(True)
 
@@ -165,6 +165,9 @@ class MainWindow(QMainWindow):
         self._action(menu, "Annuler la dernière action", self.actions.undo_last, QKeySequence.StandardKey.Undo)
         self._action(menu, "Journal des actions…", self.actions.show_log)
 
+        help_menu = bar.addMenu("&Aide")
+        self._action(help_menu, "À propos de Débarras", self._about)
+
     # --- paramètres et thème ------------------------------------------------------------
 
     def _apply_settings(self) -> None:
@@ -201,6 +204,20 @@ class MainWindow(QMainWindow):
         else:
             self.charts.clear()
             self.history_view.clear()
+
+    def _about(self) -> None:
+        version = QApplication.applicationVersion()
+        box = QMessageBox(self)
+        box.setWindowTitle("À propos de Débarras")
+        box.setIconPixmap(QApplication.windowIcon().pixmap(96, 96))
+        box.setText(
+            f"<h3>Débarras {version}</h3>"
+            "<p>Voir ce qui encombre le disque, et s'en débarrasser sans risque.</p>"
+            "<p>Arborescence et treemap, doublons, fichiers anciens, caches et installeurs "
+            "oubliés, historique des scans.<br>Jamais de suppression définitive : tout passe "
+            "par la corbeille et peut être annulé.</p>"
+            f"<p><small>Données : {os.path.dirname(self.cache.db_path)}</small></p>")
+        box.exec()
 
     def _focus_search(self) -> None:
         self.tabs.setCurrentWidget(self.search_view)

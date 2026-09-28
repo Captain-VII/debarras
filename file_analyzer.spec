@@ -2,7 +2,7 @@
 # qu'un exe unique). Lancer : build.ps1   (ou : pyinstaller --noconfirm file_analyzer.spec)
 # -*- mode: python ; coding: utf-8 -*-
 
-APP_NAME = "AnalyseurFichiers"
+APP_NAME = "Debarras"
 
 # Modules Qt jamais utilisés : on les écarte pour alléger le livrable.
 QT_EXCLUDES = [
@@ -20,7 +20,7 @@ a = Analysis(
     ["main.py"],
     pathex=[],
     binaries=[],
-    datas=[("assets/icon.ico", "assets"), ("assets/icon.png", "assets")],
+    datas=[("assets/icon.ico", "assets"), ("assets/icon.png", "assets"), ("assets/logo.png", "assets")],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
