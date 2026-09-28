@@ -1,5 +1,14 @@
 # Journal des versions
 
+## 1.4.2 — 2026-09-28
+
+- **Correctif mise à jour automatique** : en 1.4.0 et 1.4.1, « Installer et redémarrer »
+  fermait Débarras sans installer la nouvelle version (le programme d'installation ne
+  démarrait pas depuis l'exe). C'est corrigé, et Débarras ne se ferme désormais qu'une fois
+  l'installation effectivement lancée — sinon il reste ouvert et le signale.
+- **Depuis 1.4.0 ou 1.4.1**, téléchargez cette version manuellement (une seule fois) :
+  décompressez l'archive à la place de l'ancien dossier `Debarras`.
+
 ## 1.4.1 — 2026-09-28
 
 - Licences jointes au livrable : `LICENSE` (MIT) à côté de l'exe, et dossier `licenses`

@@ -141,7 +141,8 @@ def test_swap_script_replaces_folder_and_relaunches(tmp_path):
     (staged / "run.cmd").write_text(f'@echo relance> "{marker}"\n')
     dead = subprocess.Popen([sys.executable, "-c", "pass"])
     dead.wait()  # processus déjà terminé : le script n'attend pas
-    script = write_swap_script(dead.pid, install, staged, "run.cmd", folder=tmp_path)
+    started = tmp_path / "started.flag"
+    script = write_swap_script(dead.pid, install, staged, "run.cmd", folder=tmp_path, started=started)
     subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)],
                    check=True, timeout=60)
     for _ in range(50):  # Start-Process est asynchrone
@@ -151,7 +152,24 @@ def test_swap_script_replaces_folder_and_relaunches(tmp_path):
         time.sleep(0.1)
     assert (install / "version.txt").read_text() == "new"
     assert (tmp_path / "Mon appli (test).old" / "version.txt").read_text() == "old"
-    assert not staged.exists() and marker.exists()
+    assert not staged.exists() and marker.exists() and started.exists()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="lancement Windows")
+def test_launch_swap_from_windowless_parent_that_exits(tmp_path):
+    """Régression : depuis l'exe sans console, DETACHED_PROCESS empêchait PowerShell de
+    s'exécuter. On reproduit la situation avec pythonw (sans console) qui quitte aussitôt."""
+    from core.updater import wait_started
+    marker = tmp_path / "ran.flag"
+    script = tmp_path / "probe.ps1"
+    script.write_text(f"Start-Sleep -Milliseconds 800; New-Item -ItemType File -Path '{marker}' | Out-Null\n",
+                      encoding="utf-8-sig")
+    pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+    code = ("import sys; sys.path.insert(0, sys.argv[1]); from pathlib import Path; "
+            "from core.updater import launch_swap; launch_swap(Path(sys.argv[2]))")
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    subprocess.run([pythonw, "-c", code, root, str(script)], check=True, timeout=30)  # parent terminé
+    assert wait_started(marker, timeout=20), "le script lancé n'a pas tourné après la fin du parent"
 
 
 def test_dialog_and_controller_without_network(qapp, monkeypatch):

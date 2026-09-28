@@ -13,8 +13,8 @@ from PySide6.QtWidgets import (
 )
 
 from core.updater import (
-    Release, UpdateChecker, UpdateDownloader, can_self_update, install_dir, launch_swap, work_dir,
-    write_swap_script,
+    Release, UpdateChecker, UpdateDownloader, can_self_update, install_dir, launch_swap, wait_started,
+    work_dir, write_swap_script,
 )
 from utils.format import human_size
 from version import __version__
@@ -161,8 +161,21 @@ class UpdateController(QObject):
             "L'ancienne version est gardée à côté (dossier « .old »).")
         if answer != QMessageBox.StandardButton.Yes:
             return
-        script = write_swap_script(os.getpid(), install_dir(), staged)
-        launch_swap(script)
+        marker = work_dir() / "swap_started"
+        marker.unlink(missing_ok=True)
+        try:
+            script = write_swap_script(os.getpid(), install_dir(), staged, started=marker)
+            launch_swap(script)
+            started = wait_started(marker, tick=QApplication.processEvents)
+        except OSError:
+            started = False
+        if not started:  # on ne se ferme pas si rien ne prendra le relais
+            QMessageBox.warning(
+                self.window, "Mise à jour",
+                "Le programme d'installation n'a pas pu démarrer : Débarras reste ouvert, sans "
+                f"changement.\nVous pouvez télécharger la version {rel.version} manuellement.")
+            QDesktopServices.openUrl(QUrl(rel.page_url))
+            return
         self.window.close()
         QApplication.quit()
 

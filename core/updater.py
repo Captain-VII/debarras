@@ -171,11 +171,16 @@ def _ps(value: str | Path) -> str:
 
 
 def write_swap_script(pid: int, install: Path, staged: Path, exe_name: str = EXE_NAME,
-                      folder: Path | None = None) -> Path:
-    """Script PowerShell de remplacement (exécuté après la fermeture de Débarras)."""
+                      folder: Path | None = None, started: Path | None = None) -> Path:
+    """Script PowerShell de remplacement (exécuté après la fermeture de Débarras).
+
+    `started` : fichier témoin créé dès le démarrage du script ; Débarras attend de le voir
+    avant de se fermer (sinon l'utilisateur se retrouverait sans application ni mise à jour).
+    """
     backup = install.with_name(install.name + ".old")
+    signal = f"New-Item -ItemType File -Force -Path {_ps(started)} | Out-Null\n" if started else ""
     script = f"""$ErrorActionPreference = 'Stop'
-$install = {_ps(install)}; $staged = {_ps(staged)}; $backup = {_ps(backup)}; $exe = {_ps(exe_name)}
+{signal}$install = {_ps(install)}; $staged = {_ps(staged)}; $backup = {_ps(backup)}; $exe = {_ps(exe_name)}
 Set-Location ([IO.Path]::GetTempPath())
 try {{ Wait-Process -Id {int(pid)} -Timeout 60 -ErrorAction SilentlyContinue }} catch {{}}
 $moved = $false
@@ -205,10 +210,28 @@ try {{
 
 
 def launch_swap(script: Path) -> None:
-    """Lance le script détaché ; Débarras doit se fermer juste après."""
-    flags = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+    """Lance le script en arrière-plan ; il survit à la fermeture de Débarras.
+
+    Pas de DETACHED_PROCESS : sans console, PowerShell 5 s'arrête avant d'exécuter le script
+    (constaté depuis l'exe sans console). CREATE_NO_WINDOW lui donne une console invisible.
+    Entrées/sorties sur DEVNULL : un exe fenêtré n'a pas de descripteurs standard valides.
+    """
+    flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
     subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
-                      "-File", str(script)], creationflags=flags, close_fds=True)
+                      "-File", str(script)], creationflags=flags, close_fds=True,
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def wait_started(marker: Path, timeout: float = 15.0, tick: Callable[[], None] = lambda: None) -> bool:
+    """Attend le fichier témoin du script de remplacement (tick : garder l'interface vivante)."""
+    import time
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        if marker.exists():
+            return True
+        tick()
+        time.sleep(0.05)
+    return marker.exists()
 
 
 # --- threads ---------------------------------------------------------------------------------
