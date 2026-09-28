@@ -47,3 +47,8 @@ powershell -ExecutionPolicy Bypass -File release.ps1   # archive de release (+ -
 Structure : `core/` (scan, cache SQLite, doublons, images similaires, stats, actions,
 historique, mise à jour), `ui/` (fenêtre et onglets PySide6), `utils/` (formats, exports),
 `tests/` (pytest).
+
+## Licence
+
+Débarras est distribué sous licence [MIT](LICENSE). Les bibliothèques embarquées dans l'exe
+gardent leurs propres licences (notamment Qt / PySide6 sous LGPL v3).

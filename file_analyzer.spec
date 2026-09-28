@@ -44,7 +44,7 @@ a = Analysis(
     ["main.py"],
     pathex=[],
     binaries=[],
-    datas=[("assets/icon.ico", "assets"), ("assets/icon.png", "assets"), ("assets/logo.png", "assets")],
+    datas=[("assets/icon.ico", "assets"), ("assets/icon.png", "assets"), ("assets/logo.png", "assets"), ("LICENSE", ".")],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
