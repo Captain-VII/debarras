@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.cache import Cache
-from core.search import MAX_RESULTS, Hit, SearchQuery, search_files
+from core.search import MAX_RESULTS, Hit, SearchQuery, SearchResult, SearchWorker
 from ui.actions_ui import add_action_entries
 from ui.tree_view import show_in_explorer
 from utils.filetypes import CATEGORIES
@@ -46,6 +46,8 @@ class SearchView(QWidget):
         self._cache: Cache | None = None
         self._root = ""
         self.hits: list[Hit] = []
+        self._request = 0                     # seule la dernière requête est affichée
+        self._workers: set[SearchWorker] = set()
 
         self.text = QLineEdit()
         self.text.setPlaceholderText("Nom contient…  (jokers acceptés : *.iso, rapport_??.pdf)")
@@ -147,7 +149,12 @@ class SearchView(QWidget):
         return SearchQuery(self.text.text(), self.category.currentData(), exts,
                            int(self.min_mb.value() * MB), int(self.max_mb.value() * MB), newer, older)
 
+    @property
+    def busy(self) -> bool:
+        return bool(self._workers)
+
     def run(self) -> None:
+        self._request += 1
         self.results.clear()
         self.hits = []
         if not self._cache or not self._root:
@@ -157,7 +164,17 @@ class SearchView(QWidget):
         if q.is_empty():
             self.summary.setText("Saisissez un nom ou choisissez un filtre.")
             return
-        res = search_files(self._cache.conn, self._root, q)
+        self.summary.setText("Recherche…")
+        worker = SearchWorker(self._request, self._cache.db_path, self._root, q)
+        worker.done.connect(self._on_result)
+        worker.failed.connect(lambda rid, msg: rid == self._request and self.summary.setText(msg))
+        worker.finished.connect(lambda w=worker: self._workers.discard(w) or w.deleteLater())
+        self._workers.add(worker)
+        worker.start()
+
+    def _on_result(self, request_id: int, res: SearchResult) -> None:
+        if request_id != self._request:
+            return  # requête dépassée par une frappe plus récente
         self.hits = res.hits
         items = []
         for h in res.hits:
@@ -179,6 +196,10 @@ class SearchView(QWidget):
         if not self.hits:
             return None
         return ["Chemin", "Nom", "Octets", "Modifié"], [[h.path, h.name, h.size, iso(h.mtime)] for h in self.hits]
+
+    def shutdown(self) -> None:
+        for w in list(self._workers):
+            w.wait()
 
     def _context_menu(self, pos) -> None:
         it = self.results.itemAt(pos)

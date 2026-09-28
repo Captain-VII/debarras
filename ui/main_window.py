@@ -432,6 +432,7 @@ class MainWindow(QMainWindow):
             self.scanner.wait()
         self.dup_view.shutdown()
         self.history_view.shutdown()
+        self.search_view.shutdown()
         for w in list(self._stats_workers):
             w.wait()
         self.cache.close()

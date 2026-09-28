@@ -103,6 +103,7 @@ def test_main_window_scan_populates_views(qapp, root, write):
         assert w._stats.by_category["Vidéos"] == (20_000, 1)
         w.search_view.text.setText("doc")
         w.search_view.run()
+        wait_until(lambda: not w.search_view.busy and w.search_view.hits)
         assert [h.name for h in w.search_view.hits] == ["doc.pdf"]
         assert w.treemap.canvas.current == str(root)
     finally:

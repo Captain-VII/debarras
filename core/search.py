@@ -7,7 +7,11 @@ import re
 import sqlite3
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
+from PySide6.QtCore import QThread, Signal
+
+from core.cache import Cache
 from utils.filetypes import OTHER, extensions
 
 MAX_RESULTS = 5000
@@ -91,3 +95,25 @@ def search_files(conn: sqlite3.Connection, root: str, q: SearchQuery,
         f"SELECT path, name, size, mtime FROM files WHERE {cond} ORDER BY size DESC LIMIT {int(limit)}",
         args)]
     return SearchResult(hits, count, total)
+
+
+class SearchWorker(QThread):
+    """Recherche hors du thread UI (plusieurs centaines de ms sur un disque entier)."""
+
+    done = Signal(int, object)   # numéro de requête, SearchResult
+    failed = Signal(int, str)
+
+    def __init__(self, request_id: int, db_path: str | Path, root: str, query: SearchQuery,
+                 parent=None) -> None:
+        super().__init__(parent)
+        self.request_id, self.db_path, self.root, self.query = request_id, db_path, root, query
+
+    def run(self) -> None:
+        try:
+            cache = Cache(self.db_path)
+            try:
+                self.done.emit(self.request_id, search_files(cache.conn, self.root, self.query))
+            finally:
+                cache.close()
+        except Exception as exc:  # noqa: BLE001
+            self.failed.emit(self.request_id, f"Recherche impossible : {exc!r}")
