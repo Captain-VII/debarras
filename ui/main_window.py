@@ -22,6 +22,7 @@ from ui.charts import ChartsView
 from ui.dup_view import DupView
 from ui.history_view import HistoryView
 from ui.search_view import SearchView
+from ui.similar_view import SimilarView
 from ui.settings import THEMES, Settings, SettingsDialog, apply_theme
 from ui.stats_view import StatsView
 from ui.tree_view import TreeView
@@ -87,12 +88,14 @@ class MainWindow(QMainWindow):
         self.stats_view = StatsView()
         self.charts = ChartsView()
         self.dup_view = DupView()
+        self.similar_view = SimilarView()
         self.history_view = HistoryView()
         self.search_view = SearchView()
         self.tabs = QTabWidget()
         for widget, title in ((self.tree, "Arborescence"), (self.treemap, "Treemap"),
                               (self.stats_view, "Statistiques"), (self.charts, "Graphiques"),
-                              (self.dup_view, "Doublons"), (self.history_view, "Historique"),
+                              (self.dup_view, "Doublons"), (self.similar_view, "Images similaires"),
+                              (self.history_view, "Historique"),
                               (self.search_view, "Recherche")):
             self.tabs.addTab(widget, title)
         self.stats_view.old_days_changed.connect(lambda _: self._compute_stats())
@@ -105,7 +108,8 @@ class MainWindow(QMainWindow):
 
         # Actions (corbeille, déplacement, archivage)
         self.actions = ActionController(self)
-        for view in (self.tree, self.treemap, self.stats_view, self.dup_view, self.search_view):
+        for view in (self.tree, self.treemap, self.stats_view, self.dup_view, self.similar_view,
+                     self.search_view):
             view.action_requested.connect(self._request_action)
         self.actions.finished.connect(self._on_action_done)
         self.actions.simulation_changed.connect(self.sim_label.setVisible)
@@ -173,6 +177,7 @@ class MainWindow(QMainWindow):
     def _apply_settings(self) -> None:
         self.actions.whitelist = list(self.settings.whitelist)
         self.dup_view.whitelist = list(self.settings.whitelist)
+        self.similar_view.whitelist = list(self.settings.whitelist)
 
     def open_settings(self) -> None:
         dlg = SettingsDialog(self.settings, self)
@@ -297,6 +302,7 @@ class MainWindow(QMainWindow):
             return
         # Les fichiers ont bougé : rescan incrémental (hash conservés) pour rafraîchir les vues.
         self.dup_view.prune_missing()
+        self.similar_view.prune_missing()
         if self.current_scan and self.scanner is None:
             self._set_root(self.current_scan.root)
             self.start_scan()
@@ -400,6 +406,7 @@ class MainWindow(QMainWindow):
             self.stats_view.clear()
             self.charts.clear()
             self.dup_view.set_scan(None, "")
+            self.similar_view.set_scan(None, "")
             self.history_view.clear()
             self.search_view.set_scan(None, "")
             self.progress_label.setText("Aucun scan pour ce dossier.")
@@ -408,6 +415,7 @@ class MainWindow(QMainWindow):
         self.treemap.load(self.cache, scan.id, scan.root)
         self._compute_stats()
         self.dup_view.set_scan(self.cache.db_path, scan.root)
+        self.similar_view.set_scan(self.cache.db_path, scan.root)
         self.history_view.set_root(self.cache, scan.root)
         self.search_view.set_scan(self.cache, scan.root)
         duration = (scan.finished or scan.started) - scan.started
@@ -448,6 +456,7 @@ class MainWindow(QMainWindow):
             self.scanner.cancel()
             self.scanner.wait()
         self.dup_view.shutdown()
+        self.similar_view.shutdown()
         self.history_view.shutdown()
         self.search_view.shutdown()
         for w in list(self._stats_workers):

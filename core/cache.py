@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Sequence
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 _SCHEMA = r"""
 CREATE TABLE IF NOT EXISTS scans (
@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS files (
     partial_hash  TEXT,
     full_hash     TEXT,
     last_scan     INTEGER NOT NULL,
+    image_hash    INTEGER,          -- empreinte visuelle dHash (images similaires)
     PRIMARY KEY (dir_id, name)
 ) WITHOUT ROWID;
 
@@ -70,7 +71,7 @@ CREATE VIEW IF NOT EXISTS file_paths AS
 SELECT CASE WHEN substr(d.path, -1) = '\' THEN d.path || f.name
             ELSE d.path || '\' || f.name END AS path,
        d.path AS parent, f.name, f.ext, f.size, f.mtime, f.atime, f.ctime,
-       f.partial_hash, f.full_hash, f.last_scan, f.dir_id
+       f.partial_hash, f.full_hash, f.last_scan, f.dir_id, f.image_hash
 FROM files f JOIN dirpaths d ON d.id = f.dir_id;
 
 CREATE VIEW IF NOT EXISTS dir_sizes AS
@@ -93,6 +94,8 @@ ON CONFLICT(dir_id, name) DO UPDATE SET
                         THEN files.partial_hash END,
     full_hash    = CASE WHEN files.size = excluded.size AND files.mtime = excluded.mtime
                         THEN files.full_hash END,
+    image_hash   = CASE WHEN files.size = excluded.size AND files.mtime = excluded.mtime
+                        THEN files.image_hash END,
     size = excluded.size,
     mtime = excluded.mtime
 """
@@ -110,7 +113,8 @@ INSERT OR IGNORE INTO dirpaths (path)
     SELECT parent FROM files_v1
     UNION SELECT path FROM dirs_v1
     UNION SELECT parent FROM dirs_v1 WHERE parent IS NOT NULL;
-INSERT OR IGNORE INTO files
+INSERT OR IGNORE INTO files (dir_id, name, ext, size, mtime, atime, ctime,
+                             partial_hash, full_hash, last_scan)
     SELECT d.id, f.name, f.ext, f.size, f.mtime, f.atime, f.ctime,
            f.partial_hash, f.full_hash, f.last_scan
     FROM files_v1 f JOIN dirpaths d ON d.path = f.parent;
@@ -120,7 +124,7 @@ INSERT OR IGNORE INTO dirs
     LEFT JOIN dirpaths p ON p.path = s.parent;
 DROP TABLE files_v1;
 DROP TABLE dirs_v1;
-PRAGMA user_version = 2;
+PRAGMA user_version = {version};
 COMMIT;
 """
 
@@ -192,16 +196,23 @@ class Cache:
         return {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})")}
 
     def _migrate(self) -> None:
-        """v1 -> v2 : reconstruit les tables en conservant fichiers, hash et historique."""
-        if self.conn.execute("PRAGMA user_version").fetchone()[0] >= SCHEMA_VERSION:
+        """Met à niveau un cache existant sans perdre fichiers, hash ni historique."""
+        version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+        if version >= SCHEMA_VERSION:
             return
+        if version == 2:  # v2 -> v3 : empreinte visuelle
+            self.conn.execute("ALTER TABLE files ADD COLUMN image_hash INTEGER")
+            self.conn.execute("DROP VIEW IF EXISTS file_paths")  # recréée avec la colonne
+            self.conn.commit()
+            return
+        # v1 -> v3 : reconstruit les tables (chemins complets -> identifiants de dossiers).
         if "path" not in self._columns("files") and "path" not in self._columns("dirs"):
             return  # base neuve
         self.conn.executescript(_V1_TABLES)  # tables v1 éventuellement manquantes
         if "skipped" not in self._columns("dirs"):
             self.conn.execute("ALTER TABLE dirs ADD COLUMN skipped INTEGER NOT NULL DEFAULT 0")
             self.conn.commit()
-        self.conn.executescript(_MIGRATE_V1.format(schema=_SCHEMA))
+        self.conn.executescript(_MIGRATE_V1.format(schema=_SCHEMA, version=SCHEMA_VERSION))
         self.conn.execute("VACUUM")  # rend au disque la place libérée
 
     # --- identifiants de dossiers -----------------------------------------------------

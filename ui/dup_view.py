@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from core.duplicates import DupFile, DuplicateFinder, DupGroup, DupResult
+from core.duplicates import DupFile, DuplicateFinder
 from core.actions import ARCHIVE, MOVE, TRASH, protection
 from utils.export import iso
 from ui.tree_view import show_in_explorer
@@ -20,28 +20,37 @@ from utils.format import human_count, human_date, human_duration, human_size
 
 FILE_ROLE = Qt.ItemDataRole.UserRole + 1
 
-KEEP_NEWEST, KEEP_OLDEST, KEEP_PRIORITY = range(3)
+KEEP_NEWEST, KEEP_OLDEST, KEEP_PRIORITY = range(3)  # index des règles de DupView
 
 
 class DupView(QWidget):
+    """Groupes de fichiers « en trop » à cocher. Sous-classable (voir SimilarView) :
+    RULES, SEARCH_LABEL, HEADERS, _make_finder, _group_label, _row, _decorate, _result_text."""
+
     selection_changed = Signal(int, "qlonglong")  # nb cochés, octets récupérables
     action_requested = Signal(str, list)
+
+    RULES = [("Garder le plus récent", "newest"), ("Garder le plus ancien", "oldest"),
+             ("Garder le chemin prioritaire", "priority")]
+    SEARCH_LABEL = "Rechercher les doublons"
+    MIN_SIZE_KO = 1024
+    HEADERS = ["Fichier", "Taille", "Modifié"]
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._db_path: str | Path | None = None
         self._root = ""
-        self._finder: DuplicateFinder | None = None
-        self._result: DupResult | None = None
+        self._finder = None
+        self._result = None
         self._updating = False
         self.whitelist: list[str] = []
 
         # --- recherche
         self.min_size = QSpinBox()
         self.min_size.setRange(1, 10_000_000)
-        self.min_size.setValue(1024)
+        self.min_size.setValue(self.MIN_SIZE_KO)
         self.min_size.setSuffix(" Ko")
-        self.search_btn = QPushButton("Rechercher les doublons")
+        self.search_btn = QPushButton(self.SEARCH_LABEL)
         self.search_btn.clicked.connect(self.start_search)
         self.cancel_btn = QPushButton("Annuler")
         self.cancel_btn.setEnabled(False)
@@ -52,6 +61,7 @@ class DupView(QWidget):
         top = QHBoxLayout()
         top.addWidget(QLabel("Taille minimale :"))
         top.addWidget(self.min_size)
+        self._extra_search_options(top)
         top.addWidget(self.search_btn)
         top.addWidget(self.cancel_btn)
         top.addWidget(self.progress, 3)
@@ -59,8 +69,10 @@ class DupView(QWidget):
 
         # --- sélection automatique
         self.rule = QComboBox()
-        self.rule.addItems(["Garder le plus récent", "Garder le plus ancien", "Garder le chemin prioritaire"])
-        self.rule.currentIndexChanged.connect(lambda i: self._priority_box.setVisible(i == KEEP_PRIORITY))
+        for label, key in self.RULES:
+            self.rule.addItem(label, key)
+        self.rule.currentIndexChanged.connect(
+            lambda _: self._priority_box.setVisible(self.rule.currentData() == "priority"))
         self.priority = QLineEdit()
         self.priority.setPlaceholderText(r"Dossier(s) à conserver en priorité, séparés par « ; »")
         pick = QPushButton("…")
@@ -89,14 +101,15 @@ class DupView(QWidget):
 
         # --- groupes
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Fichier", "Taille", "Modifié"])
+        self.tree.setHeaderLabels(self.HEADERS)
         self.tree.setUniformRowHeights(True)
         self.tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.tree.setTextElideMode(Qt.TextElideMode.ElideMiddle)
         h = self.tree.header()
         h.setStretchLastSection(False)
         h.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        for col in range(1, len(self.HEADERS)):
+            h.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
         self.tree.itemChanged.connect(self._on_item_changed)
         self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.tree.customContextMenuRequested.connect(self._context_menu)
@@ -114,9 +127,39 @@ class DupView(QWidget):
             b.clicked.connect(lambda _=False, k=kind: self._request(k))
             bottom.addWidget(b)
             self.action_btns.append(b)
-        layout.addWidget(self.tree, 1)
+        layout.addWidget(self._central_widget(), 1)
         layout.addLayout(bottom)
         self.set_scan(None, "")
+
+    # --- points d'extension -------------------------------------------------------------
+
+    def _extra_search_options(self, layout: QHBoxLayout) -> None:
+        """Options de recherche supplémentaires (sous-classes)."""
+
+    def _central_widget(self) -> QWidget:
+        return self.tree
+
+    def _make_finder(self):
+        return DuplicateFinder(self._db_path, self._root, self.min_size.value() * 1024)
+
+    def _group_label(self, g) -> list[str]:
+        return [f"{len(g.files)} × {human_size(g.size)} — {human_size(g.wasted)} récupérables",
+                human_size(g.size * len(g.files)), ""]
+
+    def _row(self, f) -> list[str]:
+        return [f.path, human_size(f.size), human_date(f.mtime)]
+
+    def _decorate(self, child: QTreeWidgetItem, f) -> None:
+        """Retouche d'une ligne fichier (vignette…)."""
+
+    def _ordered(self, g) -> list:
+        return sorted(g.files, key=lambda f: f.path.lower())
+
+    def _result_text(self, r) -> str:
+        return (f"{human_count(len(r.groups))} groupes, "
+                f"{human_count(sum(len(g.files) for g in r.groups))} fichiers — "
+                f"{human_size(r.wasted)} récupérables. {human_count(r.candidates)} candidats, "
+                f"{human_size(r.hashed_bytes)} lus en {human_duration(r.duration)}.")
 
     # --- contexte -------------------------------------------------------------------
 
@@ -142,7 +185,7 @@ class DupView(QWidget):
             return
         self.tree.clear()
         self._result = None
-        self._finder = DuplicateFinder(self._db_path, self._root, self.min_size.value() * 1024)
+        self._finder = self._make_finder()
         self._finder.progress.connect(self._on_progress)
         self._finder.result_ready.connect(self._on_result)
         self._finder.failed.connect(self.info.setText)
@@ -176,7 +219,7 @@ class DupView(QWidget):
         self.cancel_btn.setEnabled(False)
         self.search_btn.setEnabled(bool(self._root))
 
-    def _on_result(self, r: DupResult) -> None:
+    def _on_result(self, r) -> None:
         if r.root != self._root:
             return  # un autre scan a été chargé entre-temps
         if r.cancelled:
@@ -191,34 +234,26 @@ class DupView(QWidget):
             notes.append(f"{human_count(r.skipped_changed)} modifiés/supprimés depuis le scan")
         if r.skipped_error:
             notes.append(f"{human_count(r.skipped_error)} illisibles")
-        self.info.setText(
-            f"{human_count(len(r.groups))} groupes, "
-            f"{human_count(sum(len(g.files) for g in r.groups))} fichiers — "
-            f"{human_size(r.wasted)} récupérables. {human_count(r.candidates)} candidats, "
-            f"{human_size(r.hashed_bytes)} lus en {human_duration(r.duration)}."
-            + (" " + " ; ".join(notes) + "." if notes else "")
-        )
+        self.info.setText(self._result_text(r) + (" " + " ; ".join(notes) + "." if notes else ""))
 
-    def _fill(self, groups: list[DupGroup]) -> None:
+    def _fill(self, groups: list) -> None:
         self._updating = True
         self.tree.setUpdatesEnabled(False)
         self.tree.clear()
         items = []
         for g in groups:
-            head = QTreeWidgetItem([
-                f"{len(g.files)} × {human_size(g.size)} — {human_size(g.wasted)} récupérables",
-                human_size(g.size * len(g.files)), "",
-            ])
+            head = QTreeWidgetItem(self._group_label(g))
             head.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            for f in sorted(g.files, key=lambda f: f.path.lower()):
-                child = QTreeWidgetItem([f.path, human_size(f.size), human_date(f.mtime)])
+            for f in self._ordered(g):
+                child = QTreeWidgetItem(self._row(f))
                 child.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
                                | Qt.ItemFlag.ItemIsUserCheckable)
                 child.setCheckState(0, Qt.CheckState.Unchecked)
                 child.setData(0, FILE_ROLE, f)
                 child.setToolTip(0, f.path)
-                for col in (1, 2):
+                for col in range(1, len(self.HEADERS)):
                     child.setTextAlignment(col, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                self._decorate(child, f)
                 head.addChild(child)
             items.append(head)
         self.tree.addTopLevelItems(items)
@@ -284,10 +319,10 @@ class DupView(QWidget):
     # --- sélection automatique --------------------------------------------------------
 
     def auto_select(self) -> None:
-        rule = self.rule.currentIndex()
+        rule = self.rule.currentData()
         prefixes = [os.path.normcase(os.path.abspath(p.strip().strip('"'))).rstrip(os.sep) + os.sep
                     for p in self.priority.text().split(";") if p.strip()]
-        if rule == KEEP_PRIORITY and not prefixes:
+        if rule == "priority" and not prefixes:
             self.selection_label.setText("⚠ Indiquez au moins un dossier prioritaire.")
             return
         untouched = 0
@@ -295,9 +330,11 @@ class DupView(QWidget):
         def keeper(kids: list[QTreeWidgetItem]) -> QTreeWidgetItem | None:
             nonlocal untouched
             files = [(k, k.data(0, FILE_ROLE)) for k in kids]
-            if rule == KEEP_NEWEST:
+            if rule == "resolution":  # images : meilleure définition, puis plus lourde, puis récente
+                return max(files, key=lambda kf: (kf[1].pixels, kf[1].size, kf[1].mtime))[0]
+            if rule == "newest":
                 return max(files, key=lambda kf: (kf[1].mtime, -len(kf[1].path)))[0]
-            if rule == KEEP_OLDEST:
+            if rule == "oldest":
                 return min(files, key=lambda kf: (kf[1].mtime, len(kf[1].path)))[0]
             # Chemin prioritaire : le premier dossier de la liste l'emporte, puis le plus récent.
             for pre in prefixes:

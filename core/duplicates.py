@@ -19,6 +19,11 @@ PARTIAL_SIZE = 4096
 CHUNK = 1 << 20
 # Fichiers « en ligne uniquement » (OneDrive, Proton Drive…) : les lire les téléchargerait.
 _CLOUD_ATTRS = 0x1000 | 0x40000 | 0x400000  # OFFLINE | RECALL_ON_OPEN | RECALL_ON_DATA_ACCESS
+
+
+def is_cloud_only(st: os.stat_result) -> bool:
+    """Fichier « en ligne uniquement » (OneDrive, Proton Drive…) : le lire le téléchargerait."""
+    return bool(getattr(st, "st_file_attributes", 0) & _CLOUD_ATTRS)
 _PROGRESS_INTERVAL = 0.1
 
 
@@ -135,7 +140,7 @@ class DuplicateFinder(QThread):
             if st.st_size != size or abs(st.st_mtime - mtime) > 1e-3:
                 res.skipped_changed += 1
                 continue
-            if getattr(st, "st_file_attributes", 0) & _CLOUD_ATTRS:
+            if is_cloud_only(st):
                 res.skipped_cloud += 1
                 continue
             ident = (st.st_dev, st.st_ino)

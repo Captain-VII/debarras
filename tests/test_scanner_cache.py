@@ -118,7 +118,7 @@ def test_migration_from_v1_keeps_files_hashes_and_history(tmp_path):
     cache = Cache(path)
     try:
         conn = cache.conn
-        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
         assert "path" not in {r[1] for r in conn.execute("PRAGMA table_info(files)")}
         assert sorted(conn.execute("SELECT path, size, partial_hash, full_hash FROM file_paths")) == [
             ("C:\\r\\a.txt", 10, "p1", "f1"), ("C:\\r\\s\\b.bin", 25, None, None)]
