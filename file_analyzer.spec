@@ -2,7 +2,31 @@
 # qu'un exe unique). Lancer : build.ps1   (ou : pyinstaller --noconfirm file_analyzer.spec)
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+import re
+
 APP_NAME = "Debarras"
+
+# Métadonnées Windows de l'exe (Propriétés > Détails), générées depuis version.py.
+VERSION = re.search(r'__version__ = "([^"]+)"', open("version.py", encoding="utf-8").read()).group(1)
+_v = tuple(int(x) for x in VERSION.split(".")) + (0,) * (4 - len(VERSION.split(".")))
+os.makedirs("build", exist_ok=True)
+with open("build/version_info.txt", "w", encoding="utf-8") as f:
+    f.write(f"""VSVersionInfo(
+  ffi=FixedFileInfo(filevers={_v}, prodvers={_v}, mask=0x3f, flags=0x0, OS=0x40004,
+                    fileType=0x1, subtype=0x0, date=(0, 0)),
+  kids=[
+    StringFileInfo([StringTable('040C04B0', [
+      StringStruct('FileDescription', 'Débarras — analyse et nettoyage de disque'),
+      StringStruct('ProductName', 'Débarras'),
+      StringStruct('FileVersion', '{VERSION}'),
+      StringStruct('ProductVersion', '{VERSION}'),
+      StringStruct('OriginalFilename', '{APP_NAME}.exe'),
+    ])]),
+    VarFileInfo([VarStruct('Translation', [0x040C, 1200])]),
+  ]
+)
+""")
 
 # Modules Qt jamais utilisés : on les écarte pour alléger le livrable.
 QT_EXCLUDES = [
@@ -39,7 +63,7 @@ exe = EXE(
     icon="assets/icon.ico",
     console=False,          # application fenêtrée
     upx=False,              # UPX déclenche souvent les antivirus
-    version="version_info.txt",
+    version="build/version_info.txt",
 )
 
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name=APP_NAME)

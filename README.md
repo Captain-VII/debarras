@@ -1,0 +1,49 @@
+# Débarras
+
+<img src="assets/icon.png" width="96" align="right" alt="Logo de Débarras">
+
+**Voir ce qui encombre le disque, et s'en débarrasser sans risque.** Application Windows
+(Python, PySide6) d'analyse et de nettoyage de disque.
+
+- **Arborescence et treemap** triées par taille, navigation au double-clic.
+- **Statistiques** : répartition par type, plus gros fichiers, fichiers anciens, dossiers vides,
+  caches et fichiers temporaires, installeurs oubliés — avec graphiques.
+- **Doublons** (taille → empreinte partielle → empreinte complète xxHash), **images similaires**
+  (empreinte visuelle) et **fichiers de même nom au contenu différent**, avec sélection
+  automatique (plus récent, plus ancien, meilleure résolution, dossier prioritaire).
+- **Actions sûres** : corbeille, déplacement, archive ZIP vérifiée. Jamais de suppression
+  définitive, confirmation systématique, mode simulation, journal, annulation (Ctrl+Z).
+- **Historique** des scans (ce qui a grossi ou diminué), **recherche** avec filtres,
+  **exports** CSV et rapport HTML, thème clair/sombre, **mise à jour automatique**.
+
+## Installation
+
+Téléchargez `Debarras-<version>-win64.zip` depuis la page
+[Releases](https://github.com/Captain-VII/debarras/releases), décompressez-le où vous voulez
+(par exemple dans `Documents`) et lancez `Debarras\Debarras.exe`. Aucune installation ni
+droit administrateur requis. Les données (cache, journal, paramètres) sont dans
+`%LOCALAPPDATA%\Debarras`.
+
+L'exécutable n'est pas signé : au premier lancement, Windows SmartScreen peut demander
+*Informations complémentaires › Exécuter quand même*.
+
+## Confidentialité
+
+Débarras fonctionne hors ligne. Seule la vérification des mises à jour contacte l'API GitHub
+(`api.github.com`), sans envoyer d'autre information que la version de l'application ; elle se
+désactive dans *Fichier › Paramètres*.
+
+## Développement
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-dev.txt
+.venv\Scripts\python main.py          # lancer
+.venv\Scripts\python -m pytest        # tests
+powershell -ExecutionPolicy Bypass -File build.ps1     # exe dans dist\Debarras
+powershell -ExecutionPolicy Bypass -File release.ps1   # archive de release (+ -Publish)
+```
+
+Structure : `core/` (scan, cache SQLite, doublons, images similaires, stats, actions,
+historique, mise à jour), `ui/` (fenêtre et onglets PySide6), `utils/` (formats, exports),
+`tests/` (pytest).

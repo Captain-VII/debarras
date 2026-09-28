@@ -9,6 +9,7 @@ from typing import Callable
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ["DEBARRAS_NO_UPDATE_CHECK"] = "1"  # jamais d'appel réseau pendant les tests
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 

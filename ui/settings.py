@@ -8,7 +8,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QGroupBox,
+    QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QVBoxLayout,
 )
 
@@ -25,6 +25,9 @@ class Settings:
     blacklist: list[str] = field(default_factory=list)   # ignorés au scan (motifs sur le nom)
     whitelist: list[str] = field(default_factory=list)   # protégés : jamais traités par les actions
     theme: str = "system"
+    check_updates: bool = True        # vérifier les nouvelles versions au démarrage (1×/jour)
+    last_update_check: float = 0.0
+    skipped_version: str = ""         # version que l'utilisateur a choisi d'ignorer
 
     @staticmethod
     def path() -> Path:
@@ -114,9 +117,13 @@ class SettingsDialog(QDialog):
         self.theme = QComboBox()
         for key, label in THEMES.items():
             self.theme.addItem(label, key)
-        look = QGroupBox("Apparence")
+        look = QGroupBox("Apparence et mises à jour")
         ll = QFormLayout(look)
         ll.addRow("Thème :", self.theme)
+        self.updates = QCheckBox("Vérifier les nouvelles versions au démarrage (une fois par jour)")
+        self.updates.setToolTip("Consulte les releases publiques de Débarras sur GitHub. "
+                                "Aucune donnée n'est envoyée.")
+        ll.addRow(self.updates)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
                                    | QDialogButtonBox.StandardButton.RestoreDefaults)
@@ -137,6 +144,8 @@ class SettingsDialog(QDialog):
         self._fill(settings)
 
     def _fill(self, s: Settings) -> None:
+        self._state = (s.last_update_check, s.skipped_version)  # non éditables, conservés
+        self.updates.setChecked(s.check_updates)
         self.paths.clear()
         self.paths.addItems(s.excluded_paths)
         self.names.setText(", ".join(s.excluded_names))
@@ -161,4 +170,7 @@ class SettingsDialog(QDialog):
             blacklist=_lines(self.black),
             whitelist=_lines(self.white),
             theme=self.theme.currentData(),
+            check_updates=self.updates.isChecked(),
+            last_update_check=self._state[0],
+            skipped_version=self._state[1],
         )

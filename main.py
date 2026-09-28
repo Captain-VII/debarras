@@ -8,9 +8,8 @@ from PySide6.QtWidgets import QApplication
 
 from ui.main_window import MainWindow
 from ui.settings import Settings, apply_theme
-
-
-__version__ = "1.3.0"
+from core.updater import cleanup_after_update
+from version import __version__
 
 
 def resource_path(rel: str) -> str:
@@ -24,6 +23,7 @@ def main() -> int:
         # Icône propre dans la barre des tâches (sinon celle de python.exe en développement).
         import ctypes
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Debarras.App")
+    cleanup_after_update()  # restes d'une mise à jour déjà installée
     app = QApplication(sys.argv)
     app.setApplicationName("Débarras")
     app.setApplicationVersion(__version__)

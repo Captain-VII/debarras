@@ -27,6 +27,7 @@ from ui.similar_view import SimilarView
 from ui.settings import THEMES, Settings, SettingsDialog, apply_theme
 from ui.stats_view import StatsView
 from ui.tree_view import TreeView
+from ui.update_ui import UpdateController
 from ui.treemap import TreemapView
 from utils.export import ReportData, write_csv, write_html_report
 from utils.format import human_count, human_date, human_duration, human_size
@@ -116,8 +117,10 @@ class MainWindow(QMainWindow):
             view.action_requested.connect(self._request_action)
         self.actions.finished.connect(self._on_action_done)
         self.actions.simulation_changed.connect(self.sim_label.setVisible)
+        self.updates = UpdateController(self)
         self._apply_settings()
         self._build_menu()
+        self.updates.schedule_auto_check()
 
         layout = QVBoxLayout()
         layout.addLayout(top)
@@ -173,6 +176,7 @@ class MainWindow(QMainWindow):
         self._action(menu, "Journal des actions…", self.actions.show_log)
 
         help_menu = bar.addMenu("&Aide")
+        self._action(help_menu, "Rechercher des mises à jour…", lambda: self.updates.check(manual=True))
         self._action(help_menu, "À propos de Débarras", self._about)
 
     # --- paramètres et thème ------------------------------------------------------------
@@ -465,6 +469,7 @@ class MainWindow(QMainWindow):
         self.dup_view.shutdown()
         self.similar_view.shutdown()
         self.samename_view.shutdown()
+        self.updates.shutdown()
         self.history_view.shutdown()
         self.search_view.shutdown()
         for w in list(self._stats_workers):
