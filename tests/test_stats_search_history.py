@@ -65,9 +65,27 @@ def test_search_filters(root, write, scan, cache):
     assert names(max_size=25) == ["data.xyz", "notes.txt"]
     assert names(older_than_days=365) == ["Rapport été 2024.pdf", "vacances.mp4"]
     assert names(newer_than_days=30, category="Documents") == ["notes.txt", "rapport_01.docx"]
+    assert names(text="*.PDF") == ["Rapport été 2024.pdf"]          # chemin rapide extension
+    assert names(text="RAPPORT_0?.docx") == ["rapport_01.docx"]      # joker ASCII via LIKE
+    assert names(text="*é*") == ["Rapport été 2024.pdf"]            # joker accentué
     res = search_files(cache.conn, str(root), SearchQuery(text="o"), limit=2)
     assert len(res.hits) == 2 and res.count == 3  # Rapport…, rapport_01, notes
     assert SearchQuery().is_empty()
+
+
+def test_search_special_characters_are_literal(root, write, scan, cache):
+    write("100%_fini.txt", 1)
+    write("1000_fini.txt", 1)
+    write("a!b.txt", 1)
+    scan(root)
+
+    def names(text):
+        return sorted(h.name for h in search_files(cache.conn, str(root), SearchQuery(text)).hits)
+
+    assert names("100%") == ["100%_fini.txt"]      # % n'est pas un joker
+    assert names("0_f") == ["1000_fini.txt"]        # _ non plus
+    assert names("a!b") == ["a!b.txt"]
+    assert names("*%_*") == ["100%_fini.txt"]
 
 
 def test_search_is_limited_to_root(root, write, scan, cache, tmp_path):

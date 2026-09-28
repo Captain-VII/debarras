@@ -46,11 +46,26 @@ class SearchResult:
     total_size: int
 
 
-def _name_regex(text: str) -> re.Pattern[str]:
+_EXT_ONLY = re.compile(r"\*\.([^*?\[\].]+)")
+
+
+def _name_condition(conn: sqlite3.Connection, text: str) -> tuple[str, list]:
+    """Filtre sur le nom : sous-chaîne, ou motif avec * et ? portant sur le nom entier.
+
+    Chemins rapides évalués par SQLite : « *.ext » -> colonne ext ; texte ASCII -> LIKE
+    (insensible à la casse pour l'ASCII). Sinon (accents, classes [..]) : fonction Python.
+    """
     text = text.strip()
-    if "*" in text or "?" in text:
-        return re.compile(fnmatch.translate(text), re.IGNORECASE)  # motif sur le nom entier
-    return re.compile(re.escape(text), re.IGNORECASE)            # sous-chaîne
+    wildcard = "*" in text or "?" in text
+    if m := _EXT_ONLY.fullmatch(text):
+        return "ext = ?", ["." + m.group(1).lower()]
+    if text.isascii() and "[" not in text:
+        like = text.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        like = like.replace("*", "%").replace("?", "_") if wildcard else f"%{like}%"
+        return "name LIKE ? ESCAPE '!'", [like]
+    rx = re.compile(fnmatch.translate(text) if wildcard else re.escape(text), re.IGNORECASE)
+    conn.create_function("name_match", 1, lambda n: rx.search(n) is not None, deterministic=True)
+    return "name_match(name)", []
 
 
 def search_files(conn: sqlite3.Connection, root: str, q: SearchQuery,
@@ -59,10 +74,9 @@ def search_files(conn: sqlite3.Connection, root: str, q: SearchQuery,
     where, args = [scope], list(sargs)
 
     if q.text.strip():
-        rx = _name_regex(q.text)
-        # Fonction Python : insensible à la casse, accents compris (LIKE ne gère que l'ASCII).
-        conn.create_function("name_match", 1, lambda n: rx.search(n) is not None, deterministic=True)
-        where.append("name_match(name)")
+        cond, cargs = _name_condition(conn, q.text)
+        where.append(cond)
+        args += cargs
     if q.category:
         exts = extensions(q.category)
         marks = ",".join("?" * len(exts))
