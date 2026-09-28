@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 1.4.1 — 2026-09-28
+
+- Licences jointes au livrable : `LICENSE` (MIT) à côté de l'exe, et dossier `licenses`
+  avec la LGPL v3 (Qt / PySide6), la GPL v3 à laquelle elle renvoie, les licences de Python,
+  Pillow, xxhash, Send2Trash et du chargeur PyInstaller, et un récapitulatif
+  (`THIRD_PARTY_NOTICES.txt`).
+
 ## 1.4.0 — 2026-09-28
 
 Première version publique.

@@ -12,6 +12,8 @@ if (-not (Test-Path "assets\icon.ico")) { & $py assets\make_icon.py }
 
 & $py -m PyInstaller --noconfirm --clean file_analyzer.spec
 if ($LASTEXITCODE -ne 0) { throw "Échec de PyInstaller" }
+& $py tools\collect_licenses.py dist\Debarras      # LICENSE + licenses\ (MIT, LGPL, tiers)
+if ($LASTEXITCODE -ne 0) { throw "Échec de la copie des licences" }
 
 $exe = "dist\Debarras\Debarras.exe"
 $size = (Get-ChildItem "dist\Debarras" -Recurse | Measure-Object Length -Sum).Sum / 1MB
