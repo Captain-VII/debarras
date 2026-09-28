@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import fnmatch
-import os
 import re
 import sqlite3
 import time
@@ -11,7 +10,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
-from core.cache import Cache
+from core.cache import Cache, subtree
 from utils.filetypes import OTHER, extensions
 
 MAX_RESULTS = 5000
@@ -56,9 +55,8 @@ def _name_regex(text: str) -> re.Pattern[str]:
 
 def search_files(conn: sqlite3.Connection, root: str, q: SearchQuery,
                  limit: int = MAX_RESULTS) -> SearchResult:
-    lo = root if root.endswith(os.sep) else root + os.sep
-    hi = lo[:-1] + chr(ord(lo[-1]) + 1)
-    where, args = ["path >= ?", "path < ?"], [lo, hi]
+    scope, sargs = subtree("parent", root)
+    where, args = [scope], list(sargs)
 
     if q.text.strip():
         rx = _name_regex(q.text)
@@ -89,10 +87,10 @@ def search_files(conn: sqlite3.Connection, root: str, q: SearchQuery,
         args.append(now - q.older_than_days * 86400)
 
     cond = " AND ".join(where)
-    count, total = conn.execute(f"SELECT COUNT(*), COALESCE(SUM(size), 0) FROM files WHERE {cond}",
+    count, total = conn.execute(f"SELECT COUNT(*), COALESCE(SUM(size), 0) FROM file_paths WHERE {cond}",
                                 args).fetchone()
     hits = [Hit(*r) for r in conn.execute(
-        f"SELECT path, name, size, mtime FROM files WHERE {cond} ORDER BY size DESC LIMIT {int(limit)}",
+        f"SELECT path, name, size, mtime FROM file_paths WHERE {cond} ORDER BY size DESC LIMIT {int(limit)}",
         args)]
     return SearchResult(hits, count, total)
 

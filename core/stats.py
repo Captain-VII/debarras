@@ -11,7 +11,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
-from core.cache import Cache
+from core.cache import Cache, subtree
 from utils.filetypes import CATEGORIES, category
 
 TEMP_DIR_NAMES = frozenset({
@@ -66,26 +66,23 @@ class StatsResult:
     installers: list[FileStat] = field(default_factory=list)
 
 
-def _range(root: str) -> tuple[str, str]:
-    """Bornes [lo, hi) des chemins sous `root` (exploite l'index de la clé primaire)."""
-    lo = root if root.endswith(os.sep) else root + os.sep
-    return lo, lo[:-1] + chr(ord(lo[-1]) + 1)
-
-
-def _files(conn: sqlite3.Connection, where: str, args: tuple, order: str = "size DESC",
-           limit: int = LIMIT) -> list[FileStat]:
-    sql = f"SELECT path, size, mtime, atime FROM files WHERE path >= ? AND path < ? AND {where}"
+def _files(conn: sqlite3.Connection, root: str, where: str, args: tuple = (),
+           order: str = "size DESC", limit: int = LIMIT) -> list[FileStat]:
+    """Fichiers sous `root` vérifiant `where`."""
+    scope, sargs = subtree("parent", root)
+    sql = f"SELECT path, size, mtime, atime FROM file_paths WHERE {scope} AND {where}"
     sql += f" ORDER BY {order} LIMIT {int(limit)}"
-    return [FileStat(*r) for r in conn.execute(sql, args)]
+    return [FileStat(*r) for r in conn.execute(sql, (*sargs, *args))]
 
 
 def compute_stats(conn: sqlite3.Connection, scan_id: int, root: str,
                   old_days: int = DEFAULT_OLD_DAYS) -> StatsResult:
     res = StatsResult(scan_id, root, old_days=old_days)
-    lo, hi = _range(root)
+    scope, sargs = subtree("path", root)
+    in_root = f"dir_id IN (SELECT id FROM dirpaths WHERE {scope})"  # fichiers sous `root`
     now = time.time()
 
-    row = conn.execute("SELECT size, file_count FROM dirs WHERE scan_id=? AND path=?",
+    row = conn.execute("SELECT size, file_count FROM dir_sizes WHERE scan_id=? AND path=?",
                        (scan_id, root)).fetchone()
     if row:
         res.total_size, res.file_count = row
@@ -93,8 +90,7 @@ def compute_stats(conn: sqlite3.Connection, scan_id: int, root: str,
     # Répartition par extension puis par catégorie.
     cats = {c: [0, 0] for c in CATEGORIES}
     for ext, size, count in conn.execute(
-        "SELECT ext, SUM(size), COUNT(*) FROM files WHERE path >= ? AND path < ? GROUP BY ext",
-        (lo, hi),
+        f"SELECT ext, SUM(size), COUNT(*) FROM files WHERE {in_root} GROUP BY ext", sargs,
     ):
         res.by_ext.append((ext, size, count))
         c = cats[category(ext)]
@@ -103,29 +99,30 @@ def compute_stats(conn: sqlite3.Connection, scan_id: int, root: str,
     res.by_ext.sort(key=lambda e: e[1], reverse=True)
     res.by_category = {c: (s, n) for c, (s, n) in cats.items()}
 
-    res.largest = _files(conn, "1", (lo, hi))
+    res.largest = _files(conn, root, "1")
 
     # Fichiers anciens : ni accédés ni modifiés depuis `old_days` jours.
     cutoff = now - old_days * 86400
-    res.old = _files(conn, "MAX(atime, mtime) < ?", (lo, hi, cutoff))
+    res.old = _files(conn, root, "MAX(atime, mtime) < ?", (cutoff,))
     res.old_total = conn.execute(
-        "SELECT COALESCE(SUM(size), 0), COUNT(*) FROM files "
-        "WHERE path >= ? AND path < ? AND MAX(atime, mtime) < ?", (lo, hi, cutoff),
+        f"SELECT COALESCE(SUM(size), 0), COUNT(*) FROM files WHERE {in_root} AND MAX(atime, mtime) < ?",
+        (*sargs, cutoff),
     ).fetchone()
 
     # Dossiers vides : seulement le plus haut d'une branche vide, sans rien d'ignoré dedans.
     res.empty_dirs = [r[0] for r in conn.execute(
-        "SELECT d.path FROM dirs d JOIN dirs p ON p.scan_id = d.scan_id AND p.path = d.parent "
+        "SELECT dp.path FROM dirs d JOIN dirs p ON p.scan_id = d.scan_id AND p.dir_id = d.parent_id "
+        "JOIN dirpaths dp ON dp.id = d.dir_id "
         "WHERE d.scan_id = ? AND d.file_count = 0 AND d.skipped = 0 "
-        "AND (p.file_count > 0 OR p.skipped > 0 OR p.parent IS NULL) "
-        f"ORDER BY d.path LIMIT {LIMIT}", (scan_id,),
+        "AND (p.file_count > 0 OR p.skipped > 0 OR p.parent_id IS NULL) "
+        f"ORDER BY dp.path LIMIT {LIMIT}", (scan_id,),
     )]
 
     # Temp/caches : dossiers au nom connu (le plus haut seulement) + fichiers temporaires isolés.
     cands = sorted(
         (DirStat(p, s, c) for p, s, c in conn.execute(
-            "SELECT path, size, file_count FROM dirs WHERE scan_id = ? AND parent IS NOT NULL "
-            "AND size > 0", (scan_id,))
+            "SELECT d.path, s.size, s.file_count FROM dirs s JOIN dirpaths d ON d.id = s.dir_id "
+            "WHERE s.scan_id = ? AND s.parent_id IS NOT NULL AND s.size > 0", (scan_id,))
          if os.path.basename(p).lower() in TEMP_DIR_NAMES),
         key=lambda d: d.path,
     )
@@ -139,8 +136,8 @@ def compute_stats(conn: sqlite3.Connection, scan_id: int, root: str,
     temp_prefixes = prefixes
     placeholders = ",".join("?" * len(TEMP_EXTS))
     res.temp_files = [
-        f for f in _files(conn, f"(ext IN ({placeholders}) OR name LIKE '~$%')",
-                          (lo, hi, *TEMP_EXTS), limit=LIMIT * 4)
+        f for f in _files(conn, root, f"(ext IN ({placeholders}) OR name LIKE '~$%')",
+                          TEMP_EXTS, limit=LIMIT * 4)
         if not f.path.startswith(temp_prefixes)
     ][:LIMIT]
 
@@ -148,7 +145,7 @@ def compute_stats(conn: sqlite3.Connection, scan_id: int, root: str,
     age_cut = now - INSTALLER_MIN_AGE_DAYS * 86400
     exts = (*INSTALLER_EXTS, ".exe", ".iso")
     placeholders = ",".join("?" * len(exts))
-    for f in _files(conn, f"ext IN ({placeholders}) AND mtime < ?", (lo, hi, *exts, age_cut),
+    for f in _files(conn, root, f"ext IN ({placeholders}) AND mtime < ?", (*exts, age_cut),
                     limit=LIMIT * 20):
         name = os.path.basename(f.path)
         ext = os.path.splitext(name)[1].lower()

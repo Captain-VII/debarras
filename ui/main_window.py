@@ -219,7 +219,7 @@ class MainWindow(QMainWindow):
         table = None
         if widget in (self.tree, self.treemap) and self.current_scan:
             rows = self.cache.conn.execute(
-                "SELECT path, size, file_count FROM dirs WHERE scan_id=? ORDER BY size DESC",
+                "SELECT path, size, file_count FROM dir_sizes WHERE scan_id=? ORDER BY size DESC",
                 (self.current_scan.id,)).fetchall()
             table = (["Dossier", "Octets", "Fichiers"], rows)
         elif widget is self.charts and self._stats:

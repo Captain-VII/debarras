@@ -13,7 +13,7 @@ from pathlib import Path
 import xxhash
 from PySide6.QtCore import QThread, Signal
 
-from core.cache import Cache
+from core.cache import Cache, subtree
 
 PARTIAL_SIZE = 4096
 CHUNK = 1 << 20
@@ -60,10 +60,11 @@ class DupResult:
 
 
 class _Cand:
-    __slots__ = ("path", "size", "mtime", "partial", "full", "dirty")
+    __slots__ = ("path", "dir_id", "name", "size", "mtime", "partial", "full", "dirty")
 
-    def __init__(self, path: str, size: int, mtime: float, partial: str | None, full: str | None):
-        self.path, self.size, self.mtime = path, size, mtime
+    def __init__(self, path: str, dir_id: int, name: str, size: int, mtime: float,
+                 partial: str | None, full: str | None):
+        self.path, self.dir_id, self.name, self.size, self.mtime = path, dir_id, name, size, mtime
         self.partial, self.full = partial, full
         self.dirty = False  # hash à écrire dans le cache
 
@@ -105,23 +106,24 @@ class DuplicateFinder(QThread):
     def _find(self, cache: Cache) -> DupResult:
         t0 = time.monotonic()
         res = DupResult(self.root, self.min_size)
-        lo = self.root if self.root.endswith(os.sep) else self.root + os.sep
-        hi = lo[:-1] + chr(ord(lo[-1]) + 1)
+        scope, sargs = subtree("parent", self.root)
+        dscope, _ = subtree("path", self.root)
 
         # 1. Candidats : tailles partagées par au moins deux fichiers.
         rows = cache.conn.execute(
-            "SELECT path, size, mtime, partial_hash, full_hash FROM files "
-            "WHERE path >= ? AND path < ? AND size >= ? AND size IN ("
-            "  SELECT size FROM files WHERE path >= ? AND path < ? AND size >= ? "
+            "SELECT path, dir_id, name, size, mtime, partial_hash, full_hash FROM file_paths "
+            f"WHERE {scope} AND size >= ? AND size IN ("
+            "  SELECT size FROM files "
+            f"  WHERE dir_id IN (SELECT id FROM dirpaths WHERE {dscope}) AND size >= ? "
             "  GROUP BY size HAVING COUNT(*) > 1)",
-            (lo, hi, self.min_size, lo, hi, self.min_size),
+            (*sargs, self.min_size, *sargs, self.min_size),
         ).fetchall()
         res.candidates = len(rows)
 
         # 2. Vérification (existe, inchangé, pas en ligne) + fusion des liens physiques.
         by_size: dict[int, list[_Cand]] = {}
         seen_ids: dict[int, set[tuple[int, int]]] = {}
-        for i, (path, size, mtime, partial, full) in enumerate(rows):
+        for i, (path, dir_id, name, size, mtime, partial, full) in enumerate(rows):
             if self.isInterruptionRequested():
                 return self._done(res, t0, cancelled=True)
             self._emit("Vérification des fichiers", i, len(rows))
@@ -141,7 +143,7 @@ class DuplicateFinder(QThread):
             if st.st_ino and ident in ids:
                 continue  # lien physique vers un fichier déjà compté
             ids.add(ident)
-            by_size.setdefault(size, []).append(_Cand(path, size, mtime, partial, full))
+            by_size.setdefault(size, []).append(_Cand(path, dir_id, name, size, mtime, partial, full))
         groups = [g for g in by_size.values() if len(g) > 1]
 
         # 3. Hash partiel (4 premiers Ko).
@@ -225,8 +227,8 @@ class DuplicateFinder(QThread):
         with cache.conn:
             cache.conn.executemany(
                 "UPDATE files SET partial_hash = ?, full_hash = ? "
-                "WHERE path = ? AND size = ? AND mtime = ?",
-                [(c.partial, c.full, c.path, c.size, c.mtime) for c in cands],
+                "WHERE dir_id = ? AND name = ? AND size = ? AND mtime = ?",
+                [(c.partial, c.full, c.dir_id, c.name, c.size, c.mtime) for c in cands],
             )
 
     @staticmethod

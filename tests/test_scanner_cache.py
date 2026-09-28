@@ -7,7 +7,7 @@ from core.scanner import ScanOptions, Scanner
 
 def dirs(cache: Cache, scan_id: int) -> dict[str, tuple[int, int, int]]:
     return {p: (s, c, k) for p, s, c, k in cache.conn.execute(
-        "SELECT path, size, file_count, skipped FROM dirs WHERE scan_id=?", (scan_id,))}
+        "SELECT path, size, file_count, skipped FROM dir_sizes WHERE scan_id=?", (scan_id,))}
 
 
 def test_scan_counts_and_aggregates(root, write, scan, cache):
@@ -58,12 +58,12 @@ def test_incremental_scan_keeps_hashes_of_unchanged_files(root, write, scan, cac
     gone.unlink()
     r = scan(root)
     rows = {os.path.basename(p): (ph, fh) for p, ph, fh in
-            cache.conn.execute("SELECT path, partial_hash, full_hash FROM files")}
+            cache.conn.execute("SELECT path, partial_hash, full_hash FROM file_paths")}
     assert rows["same.bin"] == ("p", "f")
     assert rows["changed.bin"] == (None, None)
     assert "gone.bin" not in rows  # purgé à la fin du scan complet
     assert r.file_count == 2
-    assert str(same) in {p for (p,) in cache.conn.execute("SELECT path FROM files")}
+    assert str(same) in {p for (p,) in cache.conn.execute("SELECT path FROM file_paths")}
 
 
 def test_cancelled_scan_keeps_no_partial_aggregates(root, write, db, cache, qapp):
@@ -90,16 +90,72 @@ def test_missing_root_reports_failure(tmp_path, db, qapp):
     assert failed and "introuvable" in failed[0]
 
 
-def test_migration_adds_skipped_column(tmp_path):
+V1_SCHEMA = """
+CREATE TABLE scans (id INTEGER PRIMARY KEY AUTOINCREMENT, root TEXT NOT NULL, started REAL NOT NULL,
+    finished REAL, status TEXT NOT NULL DEFAULT 'running', total_size INTEGER DEFAULT 0,
+    file_count INTEGER DEFAULT 0, dir_count INTEGER DEFAULT 0, errors INTEGER DEFAULT 0);
+CREATE TABLE files (path TEXT PRIMARY KEY, parent TEXT NOT NULL, name TEXT NOT NULL, ext TEXT NOT NULL,
+    size INTEGER NOT NULL, mtime REAL NOT NULL, atime REAL NOT NULL, ctime REAL NOT NULL,
+    partial_hash TEXT, full_hash TEXT, last_scan INTEGER NOT NULL);
+CREATE INDEX idx_files_parent ON files(parent);
+CREATE INDEX idx_files_size ON files(size);
+CREATE TABLE dirs (scan_id INTEGER NOT NULL, path TEXT NOT NULL, parent TEXT, size INTEGER NOT NULL,
+    file_count INTEGER NOT NULL, PRIMARY KEY (scan_id, path));
+CREATE INDEX idx_dirs_parent ON dirs(scan_id, parent);
+INSERT INTO scans VALUES (1, 'C:\\r', 1, 2, 'done', 30, 2, 2, 0), (2, 'C:\\r', 3, 4, 'done', 35, 2, 2, 0);
+INSERT INTO files VALUES ('C:\\r\\a.txt', 'C:\\r', 'a.txt', '.txt', 10, 5, 5, 5, 'p1', 'f1', 2),
+                         ('C:\\r\\s\\b.bin', 'C:\\r\\s', 'b.bin', '.bin', 25, 6, 6, 6, NULL, NULL, 2);
+INSERT INTO dirs VALUES (1, 'C:\\r', NULL, 30, 2), (1, 'C:\\r\\s', 'C:\\r', 20, 1),
+                        (2, 'C:\\r', NULL, 35, 2), (2, 'C:\\r\\s', 'C:\\r', 25, 1);
+"""
+
+
+def test_migration_from_v1_keeps_files_hashes_and_history(tmp_path):
     path = tmp_path / "old.db"
     c = sqlite3.connect(path)
-    c.execute("CREATE TABLE dirs (scan_id INTEGER, path TEXT, parent TEXT, size INTEGER, "
-              "file_count INTEGER, PRIMARY KEY (scan_id, path))")
-    c.commit()
+    c.executescript(V1_SCHEMA)  # base v1 sans colonne « skipped » (toute première version)
     c.close()
-    Cache(path).close()
-    cols = [r[1] for r in sqlite3.connect(path).execute("PRAGMA table_info(dirs)")]
-    assert "skipped" in cols
+    cache = Cache(path)
+    try:
+        conn = cache.conn
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert "path" not in {r[1] for r in conn.execute("PRAGMA table_info(files)")}
+        assert sorted(conn.execute("SELECT path, size, partial_hash, full_hash FROM file_paths")) == [
+            ("C:\\r\\a.txt", 10, "p1", "f1"), ("C:\\r\\s\\b.bin", 25, None, None)]
+        assert sorted(conn.execute("SELECT scan_id, path, parent, size, skipped FROM dir_sizes")) == [
+            (1, "C:\\r", None, 30, 0), (1, "C:\\r\\s", "C:\\r", 20, 0),
+            (2, "C:\\r", None, 35, 0), (2, "C:\\r\\s", "C:\\r", 25, 0)]
+        assert [s.id for s in cache.list_scans("C:\\r")] == [2, 1]
+        assert cache.child_dirs(2, "C:\\r") == [("C:\\r\\s", 25, 1)]
+    finally:
+        cache.close()
+    Cache(path).close()  # réouverture : pas de seconde migration
+
+
+def test_paths_at_drive_root(cache):
+    """Un fichier à la racine d'un lecteur : pas de double séparateur dans le chemin."""
+    sid = cache.start_scan("X:\\")
+    cache.upsert_files(sid, [("X:\\a.txt", "X:\\", "a.txt", ".txt", 1, 0, 0, 0)])
+    cache.insert_dirs(sid, [("X:\\", None, 1, 1, 0), ("X:\\sub", "X:\\", 0, 0, 0)])
+    assert [p for (p,) in cache.conn.execute("SELECT path FROM file_paths")] == ["X:\\a.txt"]
+    assert cache.child_files("X:\\") == [("X:\\a.txt", "a.txt", 1, 0.0)]
+    assert cache.size_of(sid, "X:\\a.txt") == 1
+    assert [p for p, *_ in cache.child_dirs(sid, "X:\\")] == ["X:\\sub"]
+
+
+def test_unused_dir_paths_are_pruned(root, write, scan, cache):
+    write("a/x.bin", 10)
+    write("b/y.bin", 10)
+    first = scan(root)
+    import shutil
+    shutil.rmtree(root / "b")
+    second = scan(root)
+    paths = {p for (p,) in cache.conn.execute("SELECT path FROM dirpaths")}
+    assert str(root / "b") in paths  # encore référencé par l'historique du 1er scan
+    cache.delete_scan(first.scan_id)
+    paths = {p for (p,) in cache.conn.execute("SELECT path FROM dirpaths")}
+    assert str(root / "b") not in paths and str(root / "a") in paths
+    assert cache.latest_scan(str(root)).id == second.scan_id
 
 
 def test_cache_queries(root, write, scan, cache):

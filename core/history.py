@@ -55,7 +55,7 @@ class HistoryDiff:
 
 def _load(cache: Cache, scan_id: int) -> dict[str, tuple[str | None, int, int]]:
     return {p: (parent, s, c) for p, parent, s, c in cache.conn.execute(
-        "SELECT path, parent, size, file_count FROM dirs WHERE scan_id=?", (scan_id,))}
+        "SELECT path, parent, size, file_count FROM dir_sizes WHERE scan_id=?", (scan_id,))}
 
 
 def compare(cache: Cache, old: ScanInfo, new: ScanInfo) -> HistoryDiff:
