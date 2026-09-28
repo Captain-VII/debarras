@@ -1,4 +1,4 @@
-# Construit dist\Debarras\Debarras.exe
+﻿# Construit dist\Debarras\Debarras.exe
 # Usage : powershell -ExecutionPolicy Bypass -File build.ps1
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot

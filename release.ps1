@@ -1,4 +1,4 @@
-# Prépare (et publie avec -Publish) une release GitHub de Débarras.
+﻿# Prépare (et publie avec -Publish) une release GitHub de Débarras.
 #   powershell -ExecutionPolicy Bypass -File release.ps1            -> tests + build + zip + empreinte
 #   powershell -ExecutionPolicy Bypass -File release.ps1 -Publish   -> idem puis tag, push et release
 # Version et dépôt lus dans version.py ; notes lues dans CHANGELOG.md (section « ## <version> »).
