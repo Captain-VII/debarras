@@ -193,6 +193,8 @@ try {{
         }} catch {{ Start-Sleep -Milliseconds 500 }}
     }}
     if (-not $moved) {{ throw 'dossier de Débarras verrouillé' }}
+    # Désinstalleur de l'installateur (absent de l'archive) : conservé dans la nouvelle version.
+    Get-ChildItem -LiteralPath $backup -Filter 'unins*' -File | Copy-Item -Destination $staged -Force
     Move-Item -LiteralPath $staged -Destination $install
     Start-Process -FilePath (Join-Path $install $exe)
 }} catch {{
@@ -277,7 +279,32 @@ def work_dir() -> Path:
     return default_db_path().parent / "update"
 
 
+UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{2A8D66B7-37C3-42D3-8B8A-A6B86A51D234}_is1"
+
+
+def sync_uninstall_entry(folder: Path | None = None, version: str = __version__,
+                         key: str = UNINSTALL_KEY) -> bool:
+    """Après une mise à jour automatique, met à jour la version affichée dans « Applications
+    installées » (entrée créée par l'installateur). Renvoie True si l'entrée a été modifiée."""
+    folder = folder or install_dir()
+    if folder is None or sys.platform != "win32":
+        return False
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key, 0,
+                            winreg.KEY_QUERY_VALUE | winreg.KEY_SET_VALUE) as k:
+            location = winreg.QueryValueEx(k, "InstallLocation")[0]
+            current = winreg.QueryValueEx(k, "DisplayVersion")[0]
+            if Path(location).resolve() != Path(folder).resolve() or current == version:
+                return False
+            winreg.SetValueEx(k, "DisplayVersion", 0, winreg.REG_SZ, version)
+            return True
+    except OSError:
+        return False  # installé sans l'installateur (archive ZIP) : rien à faire
+
+
 def cleanup_after_update() -> None:
     """Au démarrage : supprime les restes d'une mise à jour terminée (préparation, script)."""
     shutil.rmtree(work_dir(), ignore_errors=True)
     Path(tempfile.gettempdir(), "debarras_update.ps1").unlink(missing_ok=True)
+    sync_uninstall_entry()

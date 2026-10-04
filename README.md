@@ -5,7 +5,11 @@
 **Voir ce qui encombre le disque, et s'en débarrasser sans risque.** Application Windows
 (Python, PySide6) d'analyse et de nettoyage de disque.
 
-- **Arborescence et treemap** triées par taille, navigation au double-clic.
+- **Accueil : treemap « peut-on supprimer ? »** — chaque dossier et fichier est classé
+  *Système* (bloqué), *Logiciel* (déconseillé), *Vos fichiers* ou *Nettoyable*, avec la raison.
+  Arborescence triée par taille, navigation au double-clic.
+- **Nettoyage guidé** : fichiers temporaires, caches des navigateurs, rapports d'erreurs,
+  cache des shaders, Windows Update (via l'outil de Windows).
 - **Statistiques** : répartition par type, plus gros fichiers, fichiers anciens, dossiers vides,
   caches et fichiers temporaires, installeurs oubliés — avec graphiques.
 - **Doublons** (taille → empreinte partielle → empreinte complète xxHash), **images similaires**
@@ -18,11 +22,11 @@
 
 ## Installation
 
-Téléchargez `Debarras-<version>-win64.zip` depuis la page
-[Releases](https://github.com/Captain-VII/debarras/releases), décompressez-le où vous voulez
-(par exemple dans `Documents`) et lancez `Debarras\Debarras.exe`. Aucune installation ni
-droit administrateur requis. Les données (cache, journal, paramètres) sont dans
-`%LOCALAPPDATA%\Debarras`.
+Téléchargez `Debarras-<version>-setup.exe` depuis la page
+[Releases](https://github.com/Captain-VII/debarras/releases) et lancez-le : installation pour
+votre compte, sans droits administrateur, avec raccourci, entrée dans *Applications installées*
+et désinstalleur. Version portable : `Debarras-<version>-win64.zip`, à décompresser où vous
+voulez. Les données (cache, journal, paramètres) sont dans `%LOCALAPPDATA%\Debarras`.
 
 L'exécutable n'est pas signé : au premier lancement, Windows SmartScreen peut demander
 *Informations complémentaires › Exécuter quand même*.
@@ -40,12 +44,15 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-dev.txt
 .venv\Scripts\python main.py          # lancer
 .venv\Scripts\python -m pytest        # tests
-powershell -ExecutionPolicy Bypass -File build.ps1     # exe dans dist\Debarras
-powershell -ExecutionPolicy Bypass -File release.ps1   # archive de release (+ -Publish)
+powershell -ExecutionPolicy Bypass -File build.ps1     # exe dans dist\Debarras + installateur
+powershell -ExecutionPolicy Bypass -File release.ps1   # archive et installateur de release (+ -Publish)
 ```
 
-Structure : `core/` (scan, cache SQLite, doublons, images similaires, stats, actions,
-historique, mise à jour), `ui/` (fenêtre et onglets PySide6), `utils/` (formats, exports),
+L'installateur est construit avec [Inno Setup 6](https://jrsoftware.org/isinfo.php)
+(`installer/debarras.iss`) s'il est présent.
+
+Structure : `core/` (scan, cache SQLite, sécurité, nettoyage, doublons, images similaires,
+stats, actions, historique, mise à jour), `ui/` (fenêtre et onglets PySide6), `utils/` (formats, exports),
 `tests/` (pytest).
 
 ## Licence

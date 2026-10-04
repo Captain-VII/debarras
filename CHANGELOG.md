@@ -1,5 +1,25 @@
 # Journal des versions
 
+## 1.5.0 — 2026-10-04
+
+- **Nouvelle page d'accueil** : le treemap, coloré selon ce que vous pouvez supprimer sans
+  risque — rouge *Système* (Windows, Program Files, fichier d'échange…), orange *Logiciel*
+  (programmes, jeux, AppData, dépôts Git), vert *Vos fichiers*, bleu *Nettoyable* (caches,
+  temporaires, installeurs téléchargés). Chaque élément explique pourquoi.
+- **Panneau de détail** : niveau, raison, conseil, logiciels contenus dans un dossier, et
+  synthèse de l'espace par niveau avec les plus gros éléments.
+- **Garde-fous renforcés** : les éléments système ne peuvent plus être supprimés (menus grisés,
+  refus à l'exécution) ; supprimer un élément de logiciel demande une confirmation explicite ;
+  les doublons appartenant à un logiciel ne sont jamais cochés automatiquement.
+- **Nettoyage guidé** (nouvel onglet) : fichiers temporaires, caches des navigateurs (Chrome,
+  Edge, Brave, Vivaldi, Firefox, Opera), rapports d'erreurs, cache des shaders ; Windows Update
+  via le Nettoyage de disque de Windows. Tout passe par la corbeille.
+- **Ce qui a grossi** depuis le scan précédent : résumé sur l'accueil et coloriage
+  « Évolution » du treemap.
+- **Installateur** (`Debarras-1.5.0-setup.exe`) : installation sans droits administrateur,
+  raccourcis, entrée dans *Applications installées* et désinstalleur. La mise à jour
+  automatique conserve le désinstalleur et met à jour la version affichée.
+
 ## 1.4.2 — 2026-09-28
 
 - **Correctif mise à jour automatique** : en 1.4.0 et 1.4.1, « Installer et redémarrer »

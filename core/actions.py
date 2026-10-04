@@ -22,6 +22,7 @@ from typing import Callable
 from PySide6.QtCore import QThread, Signal
 from send2trash import send2trash
 
+from core import safety
 from core.cache import default_db_path
 
 TRASH, MOVE, ARCHIVE = "trash", "move", "archive"
@@ -66,6 +67,9 @@ def check_path(path: str) -> str | None:
             return "dossier système protégé"
     if "$recycle.bin" in os.path.normcase(path):
         return "corbeille"
+    verdict = safety.current().classify(path)
+    if verdict.blocked:
+        return f"protégé : {verdict.reason}"
     return None
 
 

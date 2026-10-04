@@ -33,6 +33,11 @@ $sha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
 [IO.File]::WriteAllText("$zip.sha256", "$sha  $name`n", [Text.Encoding]::ASCII)
 $mb = [math]::Round((Get-Item $zip).Length / 1MB)
 Write-Host "Archive : $zip ($mb Mo) — SHA-256 $sha"
+$setup = Join-Path "dist" "Debarras-$version-setup.exe"
+if (-not (Test-Path $setup)) { throw "Installateur absent : installez Inno Setup 6." }
+$ssha = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+[IO.File]::WriteAllText("$setup.sha256", "$ssha  Debarras-$version-setup.exe`n", [Text.Encoding]::ASCII)
+Write-Host "Installateur : $setup — SHA-256 $ssha"
 
 if (-not $Publish) {
     Write-Host "Prêt. Relancez avec -Publish pour créer le tag $tag et la release sur $repo."
@@ -40,6 +45,6 @@ if (-not $Publish) {
 }
 git tag -a $tag -m "Débarras $version"
 git push origin HEAD $tag
-gh release create $tag $zip "$zip.sha256" --repo $repo --title "Débarras $version" --notes-file $notes
+gh release create $tag $zip "$zip.sha256" $setup "$setup.sha256" --repo $repo --title "Débarras $version" --notes-file $notes
 if ($LASTEXITCODE -ne 0) { throw "Échec de gh release create" }
 Write-Host "Release publiée : https://github.com/$repo/releases/tag/$tag"

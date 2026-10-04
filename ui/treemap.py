@@ -1,4 +1,7 @@
-"""Treemap squarified dessinée au QPainter, cliquable et navigable."""
+"""Treemap squarified dessinée au QPainter, cliquable et navigable.
+
+Trois coloriages : sécurité (peut-on supprimer ?), type de fichier, évolution depuis le scan précédent.
+"""
 from __future__ import annotations
 
 import os
@@ -10,9 +13,10 @@ from PySide6.QtGui import (
     QPainter, QPaintEvent, QPen, QPixmap, QResizeEvent,
 )
 from PySide6.QtWidgets import (
-    QHBoxLayout, QLabel, QMenu, QPushButton, QToolTip, QVBoxLayout, QWidget,
+    QComboBox, QHBoxLayout, QLabel, QMenu, QPushButton, QToolTip, QVBoxLayout, QWidget,
 )
 
+from core import safety
 from core.cache import Cache
 from ui.actions_ui import add_action_entries
 from ui.tree_view import show_in_explorer
@@ -25,6 +29,13 @@ MIN_SIDE = 6.0         # px : taille mini d'un dossier pour détailler son conte
 MAX_EXPANSIONS = 2000  # dossiers détaillés au maximum (borne les requêtes SQLite)
 HEADER = 15.0          # hauteur du bandeau de nom d'un dossier
 PAD = 2.0
+
+SAFETY, TYPES, GROWTH = "safety", "types", "growth"
+MODES = {SAFETY: "Sécurité (peut-on supprimer ?)", TYPES: "Type de fichier", GROWTH: "Évolution depuis le scan précédent"}
+_GROWTH_COLORS = {  # clair / sombre : a grossi, a diminué, nouveau ou modifié, inchangé
+    False: {"up": "#d03b3b", "down": "#2e9d5b", "new": "#e08a00", "same": "#b9b8b3"},
+    True: {"up": "#e5534b", "down": "#2fa866", "new": "#d98a1c", "same": "#4a4946"},
+}
 
 
 # --- algorithme --------------------------------------------------------------------
@@ -81,6 +92,7 @@ class Entry:
     size: int
     is_dir: bool
     count: int = 0
+    mtime: float = 0.0
 
 
 @dataclass(slots=True)
@@ -112,6 +124,9 @@ class TreemapCanvas(QWidget):
         self._hover: Item | None = None
         self._selected: str | None = None
         self._expansions = 0
+        self.mode = SAFETY
+        self.growth: dict[str, int] = {}     # chemin normalisé -> variation (octets) depuis le scan précédent
+        self.since = 0.0                     # date du scan précédent (fichiers plus récents = nouveaux)
 
     # --- API ------------------------------------------------------------------------
 
@@ -125,7 +140,25 @@ class TreemapCanvas(QWidget):
         self._cache = None
         self._items, self._pixmap, self._hover = [], None, None
         self.current = ""
+        self.growth, self.since = {}, 0.0
         self.update()
+
+    def set_mode(self, mode: str) -> None:
+        self.mode = mode
+        self._invalidate()
+
+    def set_growth(self, deltas: dict[str, int], since: float) -> None:
+        self.growth = {os.path.normcase(k): v for k, v in deltas.items()}
+        self.since = since
+        if self.mode == GROWTH:
+            self._invalidate()
+
+    def verdict(self, e: Entry) -> safety.Verdict:
+        return safety.current().classify(e.path, e.is_dir)
+
+    def refresh(self) -> None:
+        """Redessine (après une mise à jour du classement de sécurité)."""
+        self._invalidate()
 
     def navigate(self, path: str, select: str | None = None) -> None:
         """Zoome sur le dossier `path` (borné à la racine du scan)."""
@@ -152,8 +185,8 @@ class TreemapCanvas(QWidget):
         if path not in self._children and self._cache:
             kids = [Entry(p, os.path.basename(p), s, True, c)
                     for p, s, c in self._cache.child_dirs(self._scan_id, path) if s > 0]
-            kids += [Entry(p, name, s, False)
-                     for p, name, s, _ in self._cache.child_files(path) if s > 0]
+            kids += [Entry(p, name, s, False, 0, m)
+                     for p, name, s, m in self._cache.child_files(path) if s > 0]
             kids.sort(key=lambda e: e.size, reverse=True)
             self._children[path] = kids
         return self._children.get(path, [])
@@ -207,6 +240,31 @@ class TreemapCanvas(QWidget):
     def _is_dark(self) -> bool:
         return self.palette().window().color().lightness() < 128
 
+    def _fill_color(self, e: Entry, dark: bool, colors: dict[str, QColor],
+                    levels: dict[str, QColor], growth: dict[str, QColor]) -> QColor:
+        """Couleur d'un fichier ou d'un dossier non détaillé, selon le mode."""
+        if self.mode == SAFETY:
+            return levels[self.verdict(e).level]
+        if self.mode == GROWTH:
+            if e.is_dir:
+                d = self.growth.get(os.path.normcase(e.path), 0)
+                if d == 0:
+                    return growth["same"]
+                base = growth["up" if d > 0 else "down"]
+                # Intensité selon la part de variation (atténué pour les petites variations).
+                ratio = min(abs(d) / max(e.size, 1), 1.0)
+                mix = 0.35 + 0.65 * ratio
+                same = growth["same"]
+                return QColor(*(int(same.getRgb()[i] * (1 - mix) + base.getRgb()[i] * mix) for i in range(3)))
+            return growth["new"] if self.since and e.mtime > self.since else growth["same"]
+        if e.is_dir:
+            return colors[OTHER].darker(130)
+        return colors[category(os.path.splitext(e.name)[1])]
+
+    @staticmethod
+    def _tint(base: QColor, color: QColor, amount: float) -> QColor:
+        return QColor(*(int(base.getRgb()[i] * (1 - amount) + color.getRgb()[i] * amount) for i in range(3)))
+
     def _render(self) -> QPixmap:
         dpr = self.devicePixelRatioF()
         pm = QPixmap(self.size() * dpr)
@@ -215,6 +273,8 @@ class TreemapCanvas(QWidget):
         surface = QColor("#1a1a19" if dark else "#fcfcfb")
         pm.fill(surface)
         colors = {k: QColor(v) for k, v in category_colors(dark).items()}
+        levels = {k: QColor(v) for k, v in safety.level_colors(dark).items()}
+        growth = {k: QColor(v) for k, v in _GROWTH_COLORS[dark].items()}
         dir_fill = [QColor("#2a2a28"), QColor("#343432")] if dark else [QColor("#ecebe7"), QColor("#e2e1dc")]
         text = QColor("#ffffff" if dark else "#0b0b0b")
         muted = QColor("#c3c2b7" if dark else "#52514e")
@@ -236,10 +296,15 @@ class TreemapCanvas(QWidget):
                 p.fillRect(r, dir_fill[1])
                 p.fillRect(r, QColor(muted.red(), muted.green(), muted.blue(), 60))
                 p.setBrush(Qt.BrushStyle.NoBrush)
-            elif e.is_dir:
-                p.fillRect(r, dir_fill[it.depth % 2] if it.detailed else colors[OTHER].darker(130))
+            elif e.is_dir and it.detailed:
+                bg = dir_fill[it.depth % 2]
+                if self.mode == SAFETY:  # fond du dossier teinté par son niveau
+                    bg = self._tint(bg, levels[self.verdict(e).level], 0.22)
+                elif self.mode == GROWTH and self.growth.get(os.path.normcase(e.path), 0):
+                    bg = self._tint(bg, growth["up" if self.growth[os.path.normcase(e.path)] > 0 else "down"], 0.15)
+                p.fillRect(r, bg)
             else:
-                base = colors[category(os.path.splitext(e.name)[1])]
+                base = self._fill_color(e, dark, colors, levels, growth)
                 g = QLinearGradient(r.topLeft(), r.bottomRight())
                 g.setColorAt(0, base.lighter(118))
                 g.setColorAt(1, base.darker(118))
@@ -317,8 +382,16 @@ class TreemapCanvas(QWidget):
         if e is None:
             return it.label
         if e.is_dir:
-            return f"{e.path}\n{human_size(e.size)} — {human_count(e.count)} fichiers"
-        return f"{e.path}\n{human_size(e.size)} — {category(os.path.splitext(e.name)[1])}"
+            text = f"{e.path}\n{human_size(e.size)} — {human_count(e.count)} fichiers"
+        else:
+            text = f"{e.path}\n{human_size(e.size)} — {category(os.path.splitext(e.name)[1])}"
+        v = self.verdict(e)
+        text += f"\n\n{v.label} : {v.reason}"
+        if self.mode == GROWTH and e.is_dir and (d := self.growth.get(os.path.normcase(e.path))):
+            text += f"\nDepuis le scan précédent : {'+' if d > 0 else '−'}{human_size(abs(d))}"
+        elif self.mode == GROWTH and not e.is_dir and self.since and e.mtime > self.since:
+            text += "\nNouveau ou modifié depuis le scan précédent"
+        return text
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         if event.button() == Qt.MouseButton.BackButton:
@@ -359,7 +432,7 @@ class TreemapCanvas(QWidget):
                 menu.addAction("Zoomer ici", lambda: self.navigate(e.path))
             menu.addAction("Afficher dans l'Explorateur", lambda: show_in_explorer(e.path))
             menu.addAction("Copier le chemin", lambda: QGuiApplication.clipboard().setText(e.path))
-            add_action_entries(menu, [e.path], self.action_requested.emit)
+            add_action_entries(menu, [e.path], self.action_requested.emit, self.verdict(e))
             menu.addSeparator()
         up = menu.addAction("Remonter", self.go_up)
         up.setEnabled(self.can_go_up())
@@ -379,10 +452,19 @@ class TreemapView(QWidget):
         self.canvas.directory_changed.connect(self._on_dir)
         self.action_requested = self.canvas.action_requested
 
+        self.mode_box = QComboBox()
+        for key, label in MODES.items():
+            self.mode_box.addItem(label, key)
+        self.mode_box.currentIndexChanged.connect(self._on_mode)
+        hint = QLabel("Double-clic : zoomer — Retour arrière : remonter")
+        hint.setStyleSheet("color: palette(placeholder-text);")
+
         nav = QHBoxLayout()
         nav.addWidget(self.up_btn)
         nav.addWidget(self.path_label, 1)
-        nav.addWidget(QLabel("Double-clic : zoomer — Retour arrière : remonter"))
+        nav.addWidget(hint)
+        nav.addWidget(QLabel("Couleurs :"))
+        nav.addWidget(self.mode_box)
 
         self.legend = QHBoxLayout()
         self._build_legend()
@@ -403,17 +485,39 @@ class TreemapView(QWidget):
         while self.legend.count():
             w = self.legend.takeAt(0).widget()
             if w:
+                w.hide()  # sinon visible jusqu'à sa destruction différée
                 w.deleteLater()
         dark = self.canvas._is_dark()
-        colors = category_colors(dark)
-        for cat in CATEGORIES:
+        mode = self.canvas.mode
+        if mode == SAFETY:
+            colors = safety.level_colors(dark)
+            entries = [(colors[lv], safety.LABELS[lv], safety.HINTS[lv]) for lv in safety.LEVELS]
+        elif mode == GROWTH:
+            g = _GROWTH_COLORS[dark]
+            entries = [(g["up"], "A grossi", ""), (g["down"], "A diminué", ""),
+                       (g["new"], "Fichier nouveau ou modifié", ""), (g["same"], "Inchangé", "")]
+        else:
+            colors = category_colors(dark)
+            entries = [(colors[cat], cat, "") for cat in CATEGORIES]
+        for color, text, tip in entries:
             swatch = QLabel()
             swatch.setFixedSize(12, 12)
-            swatch.setStyleSheet(f"background:{colors[cat]}; border-radius:2px;")
+            swatch.setStyleSheet(f"background:{color}; border-radius:2px;")
+            label = QLabel(text)
+            if tip:
+                label.setToolTip(tip)
+                swatch.setToolTip(tip)
             self.legend.addWidget(swatch)
-            self.legend.addWidget(QLabel(cat))
+            self.legend.addWidget(label)
             self.legend.addSpacing(10)
         self.legend.addStretch(1)
+
+    def _on_mode(self) -> None:
+        self.canvas.set_mode(self.mode_box.currentData())
+        self._build_legend()
+
+    def set_mode(self, mode: str) -> None:
+        self.mode_box.setCurrentIndex(max(0, self.mode_box.findData(mode)))
 
     def load(self, cache: Cache, scan_id: int, root: str) -> None:
         self.canvas.load(cache, scan_id, root)

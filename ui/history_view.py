@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 from PySide6.QtCharts import QChart, QChartView, QDateTimeAxis, QLineSeries, QValueAxis
-from PySide6.QtCore import QDateTime, QPointF, Qt
+from PySide6.QtCore import QDateTime, QPointF, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QCursor, QGuiApplication, QPainter, QPen
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QHBoxLayout, QHeaderView, QLabel, QMenu, QMessageBox,
@@ -38,6 +38,8 @@ def signed_count(n: int) -> str:
 
 
 class HistoryView(QWidget):
+    diff_ready = Signal(object)   # HistoryDiff affiché (relayé vers l'accueil)
+
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._cache: Cache | None = None
@@ -238,6 +240,7 @@ class HistoryView(QWidget):
         if not self._scans or diff.new.root != self._root:
             return
         self._diff = diff
+        self.diff_ready.emit(diff)
         changed = len(diff.deltas)
         new = sum(1 for d in diff.deltas.values() if d.status == NEW)
         removed = sum(1 for d in diff.deltas.values() if d.status == REMOVED)

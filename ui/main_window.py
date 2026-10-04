@@ -13,14 +13,19 @@ from PySide6.QtWidgets import (
     QProgressBar, QPushButton, QTabWidget, QVBoxLayout, QWidget,
 )
 
-from core.actions import ActionRecord
+from core import safety
+from core.actions import TRASH, ActionRecord
 from core.cache import Cache, ScanInfo
+from core.safety import SafetyWorker
 from core.scanner import Scanner, ScanResult
 from core.stats import StatsResult, StatsWorker
+from core.updater import install_dir
 from ui.actions_ui import SIM_STYLE, ActionController
 from ui.charts import ChartsView
+from ui.cleanup_view import CleanupView
 from ui.dup_view import DupView
 from ui.history_view import HistoryView
+from ui.home_view import HomeView
 from ui.search_view import SearchView
 from ui.samename_view import SameNameView
 from ui.similar_view import SimilarView
@@ -28,7 +33,6 @@ from ui.settings import THEMES, Settings, SettingsDialog, apply_theme
 from ui.stats_view import StatsView
 from ui.tree_view import TreeView
 from ui.update_ui import UpdateController
-from ui.treemap import TreemapView
 from utils.export import ReportData, write_csv, write_html_report
 from utils.format import human_count, human_date, human_duration, human_size
 
@@ -86,7 +90,9 @@ class MainWindow(QMainWindow):
 
         # Onglets
         self.tree = TreeView()
-        self.treemap = TreemapView()
+        self.home = HomeView()
+        self.treemap = self.home.treemap
+        self.cleanup_view = CleanupView()
         self.stats_view = StatsView()
         self.charts = ChartsView()
         self.dup_view = DupView()
@@ -95,13 +101,18 @@ class MainWindow(QMainWindow):
         self.history_view = HistoryView()
         self.search_view = SearchView()
         self.tabs = QTabWidget()
-        for widget, title in ((self.tree, "Arborescence"), (self.treemap, "Treemap"),
+        for widget, title in ((self.home, "Accueil"), (self.tree, "Arborescence"),
                               (self.stats_view, "Statistiques"), (self.charts, "Graphiques"),
                               (self.dup_view, "Doublons"), (self.similar_view, "Images similaires"),
-                              (self.samename_view, "Même nom"),
+                              (self.samename_view, "Même nom"), (self.cleanup_view, "Nettoyage"),
                               (self.history_view, "Historique"),
                               (self.search_view, "Recherche")):
             self.tabs.addTab(widget, title)
+        self.tabs.currentChanged.connect(self._on_tab)
+        self.home.open_cleanup.connect(lambda: self.tabs.setCurrentWidget(self.cleanup_view))
+        self.home.open_history.connect(lambda: self.tabs.setCurrentWidget(self.history_view))
+        self.history_view.diff_ready.connect(self._on_diff)
+        self._safety_worker: SafetyWorker | None = None
         self.stats_view.old_days_changed.connect(lambda _: self._compute_stats())
         self._stats_workers: set[StatsWorker] = set()
         self.tree.show_in_treemap.connect(self._show_in_treemap)
@@ -116,6 +127,7 @@ class MainWindow(QMainWindow):
                      self.samename_view, self.search_view):
             view.action_requested.connect(self._request_action)
         self.actions.finished.connect(self._on_action_done)
+        self.cleanup_view.cleanup_requested.connect(lambda paths, sizes: self.actions.request(TRASH, paths, sizes))
         self.actions.simulation_changed.connect(self.sim_label.setVisible)
         self.updates = UpdateController(self)
         self._apply_settings()
@@ -211,7 +223,7 @@ class MainWindow(QMainWindow):
             act.setChecked(act.data() == theme)
         apply_theme(theme)
         # Treemap et graphiques calculent leurs couleurs selon la palette : on redessine.
-        self.treemap.refresh_theme()
+        self.home.refresh_theme()
         if self.current_scan:
             self._load_latest(self.current_scan.root)
         else:
@@ -247,7 +259,7 @@ class MainWindow(QMainWindow):
         widget = self.tabs.currentWidget()
         label = self.tabs.tabText(self.tabs.currentIndex())
         table = None
-        if widget in (self.tree, self.treemap) and self.current_scan:
+        if widget in (self.tree, self.home) and self.current_scan:
             rows = self.cache.conn.execute(
                 "SELECT path, size, file_count FROM dir_sizes WHERE scan_id=? ORDER BY size DESC",
                 (self.current_scan.id,)).fetchall()
@@ -308,6 +320,8 @@ class MainWindow(QMainWindow):
     def _on_action_done(self, rec: ActionRecord) -> None:
         if rec.simulated:
             return
+        if self.cleanup_view.analyzed:
+            self.cleanup_view.analyze()
         # Les fichiers ont bougé : rescan incrémental (hash conservés) pour rafraîchir les vues.
         self.dup_view.prune_missing()
         self.similar_view.prune_missing()
@@ -411,7 +425,7 @@ class MainWindow(QMainWindow):
         self._stats = None
         if scan is None:
             self.tree.clear()
-            self.treemap.clear()
+            self.home.clear()
             self.stats_view.clear()
             self.charts.clear()
             self.dup_view.set_scan(None, "")
@@ -422,7 +436,10 @@ class MainWindow(QMainWindow):
             self.progress_label.setText("Aucun scan pour ce dossier.")
             return False
         self.tree.load(self.cache, scan.id, scan.root)
+        self.home.set_growth(None)
         self.treemap.load(self.cache, scan.id, scan.root)
+        self.home.set_loading(scan.root, scan.total_size)
+        self._classify(scan)
         self._compute_stats()
         self.dup_view.set_scan(self.cache.db_path, scan.root)
         self.similar_view.set_scan(self.cache.db_path, scan.root)
@@ -458,9 +475,42 @@ class MainWindow(QMainWindow):
         self.stats_view.set_result(r)
         self.charts.set_data(self.cache, r)
 
+    def _classify(self, scan: ScanInfo) -> None:
+        """Repère les logiciels du scan et répartit l'espace par niveau de risque (arrière-plan)."""
+        if self._safety_worker:
+            self._safety_worker.requestInterruption()
+        app = install_dir()
+        worker = SafetyWorker(self.cache.db_path, scan.id, scan.root, str(app) if app else None)
+        worker.done.connect(lambda res, sid=scan.id: self._on_safety(sid, *res))
+        worker.failed.connect(lambda msg: self.statusBar().showMessage(msg, 8000))
+        worker.finished.connect(lambda w=worker: self._safety_done(w))
+        self._safety_worker = worker
+        worker.start()
+
+    def _safety_done(self, worker: SafetyWorker) -> None:
+        if self._safety_worker is worker:
+            self._safety_worker = None
+        worker.deleteLater()
+
+    def _on_safety(self, scan_id: int, clf: safety.Classifier, summary: safety.SafetySummary) -> None:
+        scan = self.current_scan
+        if scan is None or scan.id != scan_id:
+            return  # résultat périmé
+        safety.set_current(clf)
+        self.treemap.canvas.refresh()
+        self.home.set_summary(scan.root, scan.total_size, summary)
+
+    def _on_diff(self, diff) -> None:
+        if self.current_scan and diff.new.id == self.current_scan.id:
+            self.home.set_growth(diff)
+
+    def _on_tab(self, index: int) -> None:
+        if self.tabs.widget(index) is self.cleanup_view and not self.cleanup_view.analyzed:
+            self.cleanup_view.analyze()
+
     def _show_in_treemap(self, path: str) -> None:
         self.treemap.show_path(path)
-        self.tabs.setCurrentWidget(self.treemap)
+        self.tabs.setCurrentWidget(self.home)
 
     def closeEvent(self, event: QCloseEvent) -> None:
         if self.scanner:
@@ -472,6 +522,10 @@ class MainWindow(QMainWindow):
         self.updates.shutdown()
         self.history_view.shutdown()
         self.search_view.shutdown()
+        self.cleanup_view.shutdown()
+        if self._safety_worker:
+            self._safety_worker.requestInterruption()
+            self._safety_worker.wait()
         for w in list(self._stats_workers):
             w.wait()
         self.cache.close()

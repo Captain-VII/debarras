@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
+from core import safety
 from core.actions import (
     ARCHIVE, DONE, ERROR, KIND_LABELS, MOVE, RESTORED, SIMULATED, SKIPPED, TRASH, ActionLog,
     ActionRecord, ActionWorker, plan,
@@ -19,17 +20,47 @@ from core.actions import (
 from utils.format import human_count, human_date, human_size
 
 SIM_STYLE = "background:#c98500; color:#000; padding:4px 8px; border-radius:3px; font-weight:bold;"
+_RISK_STYLE = "border-left: 4px solid {color}; padding: 6px 10px;"
 
 
-def add_action_entries(menu: QMenu, paths: list[str], emit: Callable[[str, list[str]], None]) -> None:
-    """Ajoute les trois actions au menu contextuel d'une vue."""
+def _esc(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def add_action_entries(menu: QMenu, paths: list[str], emit: Callable[[str, list[str]], None],
+                       verdict: safety.Verdict | None = None) -> None:
+    """Ajoute les trois actions au menu contextuel d'une vue (grisées pour un élément système)."""
     if not paths:
         return
+    if verdict is None and len(paths) == 1:
+        verdict = safety.current().classify(paths[0])
     suffix = f" ({len(paths)})" if len(paths) > 1 else ""
     menu.addSeparator()
-    menu.addAction(f"Mettre à la corbeille…{suffix}", lambda: emit(TRASH, paths))
-    menu.addAction(f"Déplacer vers…{suffix}", lambda: emit(MOVE, paths))
+    if verdict is not None and verdict.blocked:
+        info = menu.addAction(f"🔒 Protégé : {verdict.reason}")
+        info.setEnabled(False)
+        return
+    warn = " ⚠" if verdict is not None and verdict.level == safety.SOFTWARE else ""
+    menu.addAction(f"Mettre à la corbeille…{suffix}{warn}", lambda: emit(TRASH, paths))
+    menu.addAction(f"Déplacer vers…{suffix}{warn}", lambda: emit(MOVE, paths))
     menu.addAction(f"Archiver en ZIP…{suffix}", lambda: emit(ARCHIVE, paths))
+
+
+def risk_report(paths: list[str]) -> tuple[list[str], list[str]]:
+    """(éléments système refusés, avertissements logiciels) pour une liste de chemins."""
+    clf = safety.current()
+    blocked, warnings = [], []
+    for p in paths:
+        v = clf.classify(p)
+        if v.blocked:
+            blocked.append(f"{p} — {v.reason}")
+        elif v.level == safety.SOFTWARE:
+            warnings.append(f"{p} — {v.reason}")
+        elif os.path.isdir(p):
+            inside = clf.risky_inside(p)
+            if inside:
+                warnings.append(f"{p} — contient des logiciels : " + ", ".join(inside))
+    return blocked, warnings
 
 
 class ConfirmDialog(QDialog):
@@ -79,12 +110,36 @@ class ConfirmDialog(QDialog):
             layout.addWidget(QLabel("Les éléments restent récupérables depuis la corbeille "
                                     "et via Actions › Annuler la dernière action."))
 
+        # Sécurité : éléments système (refusés) et logiciels (confirmation explicite).
+        blocked, warnings = risk_report(paths) if kind != ARCHIVE or self.trash_originals.isChecked() else ([], [])
+        self.understood = QCheckBox("J'ai compris : je veux quand même traiter ces éléments de logiciel")
+        if blocked:
+            box = QLabel("🔒 <b>Ignorés — indispensables à Windows :</b><br>" + "<br>".join(
+                _esc(b) for b in blocked[:8]) + ("<br>…" if len(blocked) > 8 else ""))
+            box.setWordWrap(True)
+            box.setStyleSheet(_RISK_STYLE.format(color="#d03b3b"))
+            layout.addWidget(box)
+        if warnings:
+            box = QLabel("⚠ <b>Attention — ces éléments font partie de logiciels.</b> Les supprimer peut "
+                         "empêcher un programme ou un jeu de fonctionner. Désinstallez plutôt le logiciel "
+                         "depuis Paramètres › Applications.<br><br>" + "<br>".join(
+                             _esc(w) for w in warnings[:8]) + ("<br>…" if len(warnings) > 8 else ""))
+            box.setWordWrap(True)
+            box.setStyleSheet(_RISK_STYLE.format(color="#e08a00"))
+            layout.addWidget(box)
+            layout.addWidget(self.understood)
+        else:
+            self.understood.setChecked(True)
+
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
         self.ok = buttons.addButton("Simuler" if simulated else "Confirmer",
                                     QDialogButtonBox.ButtonRole.AcceptRole)
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        if warnings:
+            self.ok.setEnabled(False)
+            self.understood.toggled.connect(self.ok.setEnabled)
 
     def _browse(self, paths: list[str]) -> None:
         start = os.path.dirname(paths[0]) if paths else ""

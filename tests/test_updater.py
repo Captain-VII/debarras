@@ -133,6 +133,7 @@ def test_swap_script_replaces_folder_and_relaunches(tmp_path):
     install = tmp_path / "Mon appli (test)"   # espaces et parenthèses dans le chemin
     install.mkdir()
     (install / "version.txt").write_text("old")
+    (install / "unins000.exe").write_text("uninstaller")   # posé par l'installateur
     staged = tmp_path / "staged"
     staged.mkdir()
     (staged / "version.txt").write_text("new")
@@ -151,6 +152,7 @@ def test_swap_script_replaces_folder_and_relaunches(tmp_path):
 
         time.sleep(0.1)
     assert (install / "version.txt").read_text() == "new"
+    assert (install / "unins000.exe").read_text() == "uninstaller"   # désinstalleur conservé
     assert (tmp_path / "Mon appli (test).old" / "version.txt").read_text() == "old"
     assert not staged.exists() and marker.exists() and started.exists()
 
@@ -213,3 +215,23 @@ def test_dialog_and_controller_without_network(qapp, monkeypatch):
     ctl._auto_check()
     assert called == [False]
     os.environ["DEBARRAS_NO_UPDATE_CHECK"] = "1"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="registre Windows")
+def test_sync_uninstall_entry(tmp_path):
+    import winreg
+    from core.updater import sync_uninstall_entry
+    key = r"Software\DebarrasTest\Uninstall_is1"
+    with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key) as k:
+        winreg.SetValueEx(k, "InstallLocation", 0, winreg.REG_SZ, str(tmp_path))
+        winreg.SetValueEx(k, "DisplayVersion", 0, winreg.REG_SZ, "1.0.0")
+    try:
+        assert not sync_uninstall_entry(tmp_path / "ailleurs", "2.0.0", key)   # autre installation
+        assert sync_uninstall_entry(tmp_path, "2.0.0", key)
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key) as k:
+            assert winreg.QueryValueEx(k, "DisplayVersion")[0] == "2.0.0"
+        assert not sync_uninstall_entry(tmp_path, "2.0.0", key)                # déjà à jour
+        assert not sync_uninstall_entry(tmp_path, "2.0.0", key + "_absent")    # installé via ZIP
+    finally:
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, key)
+        winreg.DeleteKey(winreg.HKEY_CURRENT_USER, r"Software\DebarrasTest")

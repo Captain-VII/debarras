@@ -5,13 +5,14 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QColor, QGuiApplication
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QFileDialog, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
     QMenu, QProgressBar, QPushButton, QSpinBox, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
     QWidget,
 )
 
+from core import safety
 from core.duplicates import DupFile, DuplicateFinder
 from core.actions import ARCHIVE, MOVE, TRASH, protection
 from utils.export import iso
@@ -19,6 +20,7 @@ from ui.tree_view import show_in_explorer
 from utils.format import human_count, human_date, human_duration, human_size
 
 FILE_ROLE = Qt.ItemDataRole.UserRole + 1
+RISK_ROLE = Qt.ItemDataRole.UserRole + 2   # Verdict d'un fichier système ou de logiciel
 
 KEEP_NEWEST, KEEP_OLDEST, KEEP_PRIORITY = range(3)  # index des règles de DupView
 
@@ -152,6 +154,19 @@ class DupView(QWidget):
     def _decorate(self, child: QTreeWidgetItem, f) -> None:
         """Retouche d'une ligne fichier (vignette…)."""
 
+    def _mark_risk(self, child: QTreeWidgetItem, path: str) -> None:
+        """Fichier système ou de logiciel : signalé, et jamais coché automatiquement."""
+        v = safety.current().classify(path, False)
+        if v.level not in (safety.SYSTEM, safety.SOFTWARE):
+            return
+        child.setData(0, RISK_ROLE, v)
+        child.setForeground(0, QColor(safety.level_colors(self.palette().window().color().lightness() < 128)[v.level]))
+        child.setToolTip(0, f"{path}\n\n⚠ {v.label} : {v.reason}\n"
+                            "Ne le supprimez que si vous savez ce que vous faites.")
+        if v.blocked:
+            child.setFlags(child.flags() & ~Qt.ItemFlag.ItemIsUserCheckable)
+            child.setData(0, Qt.ItemDataRole.CheckStateRole, None)
+
     def _ordered(self, g) -> list:
         return sorted(g.files, key=lambda f: f.path.lower())
 
@@ -254,6 +269,7 @@ class DupView(QWidget):
                 for col in range(1, len(self.HEADERS)):
                     child.setTextAlignment(col, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
                 self._decorate(child, f)
+                self._mark_risk(child, f.path)
                 head.addChild(child)
             items.append(head)
         self.tree.addTopLevelItems(items)
@@ -312,7 +328,8 @@ class DupView(QWidget):
         for head, kids in self._groups():
             to_check = set(map(id, choose(head, kids)))
             for k in kids:
-                k.setCheckState(0, Qt.CheckState.Checked if id(k) in to_check else Qt.CheckState.Unchecked)
+                if k.flags() & Qt.ItemFlag.ItemIsUserCheckable:  # fichiers système : jamais cochables
+                    k.setCheckState(0, Qt.CheckState.Checked if id(k) in to_check else Qt.CheckState.Unchecked)
         self._updating = False
         self._update_selection()
 
@@ -352,7 +369,8 @@ class DupView(QWidget):
                 return []
             # Liste blanche : un fichier protégé n'est jamais coché.
             return [k for k in kids if k is not keep
-                    and not protection(k.data(0, FILE_ROLE).path, self.whitelist)]
+                    and not protection(k.data(0, FILE_ROLE).path, self.whitelist)
+                    and k.data(0, RISK_ROLE) is None]  # logiciels et système : jamais cochés d'office
 
         self._set_checks(choose)
         if untouched:
@@ -386,7 +404,8 @@ class DupView(QWidget):
         self._updating = True
         for j in range(head.childCount()):
             k = head.child(j)
-            k.setCheckState(0, Qt.CheckState.Unchecked if k is item else Qt.CheckState.Checked)
+            if k.flags() & Qt.ItemFlag.ItemIsUserCheckable:
+                k.setCheckState(0, Qt.CheckState.Unchecked if k is item else Qt.CheckState.Checked)
         self._updating = False
         self._update_selection()
 
