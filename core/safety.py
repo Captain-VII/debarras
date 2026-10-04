@@ -74,6 +74,9 @@ _DEV_CLEANABLE = {"__pycache__": "Cache Python, recréé automatiquement",
                   ".mypy_cache": "Cache d'analyse, recréé automatiquement",
                   ".ruff_cache": "Cache d'analyse, recréé automatiquement",
                   "node_modules": "Dépendances JavaScript, re-téléchargées par « npm install »"}
+# Sous-dossiers où les logiciels rangent leurs .dll ; le logiciel lui-même est au-dessus.
+_BIN_NAMES = {"bin", "bin32", "bin64", "binaries", "win64", "win32", "x64", "x86", "amd64", "lib", "libs",
+              "dll", "dlls", "plugins", "redist", "runtime", "engine"}
 _INSTALLERS = {".exe", ".msi", ".msix", ".msixbundle", ".appx", ".appxbundle"}
 _GIT_LIKE = {".git", ".hg", ".svn"}
 _VENVS = {".venv", "venv", ".tox", ".conda"}
@@ -253,6 +256,14 @@ def software_dirs(conn: sqlite3.Connection, root: str) -> set[str]:
         parent = os.path.dirname(d)
         if parent in exe_dirs and _n(parent) != _n(root) and len(parent) > 3:
             out.add(parent)
+        # Dossiers techniques (bin, Binaries\Win64…) : le logiciel est le dossier au-dessus.
+        cur = d
+        while os.path.basename(cur).lower() in _BIN_NAMES:
+            parent = os.path.dirname(cur)
+            if parent == cur or _n(parent) == _n(root) or len(parent) <= 3:
+                break
+            out.add(parent)
+            cur = parent
     return out
 
 
@@ -356,6 +367,7 @@ class SafetyWorker(QThread):
                 summary = summarize(conn, self.scan_id, self.root, clf, self.isInterruptionRequested)
             finally:
                 conn.close()
-            self.done.emit((clf, summary))
+            if not self.isInterruptionRequested():  # interrompu : résultat partiel, jamais publié
+                self.done.emit((clf, summary))
         except Exception as exc:  # noqa: BLE001
             self.failed.emit(f"Analyse de sécurité impossible : {exc!r}")

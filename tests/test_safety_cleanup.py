@@ -217,3 +217,44 @@ def test_bin_info_reads_real_drive():
     from core.recycle import bin_info
     b = bin_info(os.environ.get("SystemDrive", "C:") + "\\")
     assert b.used >= 0 and (b.capacity is None or b.capacity > 0)
+
+
+@pytest.mark.usefixtures("fake_home")
+def test_game_with_binaries_subfolder(root, write, scan):
+    write("Jeux/rocketleague/Binaries/Win64/RocketLeague.exe", 10)
+    write("Jeux/rocketleague/Binaries/Win64/steam_api64.dll", 10)
+    write("Jeux/rocketleague/TAGame/CookedPCConsole/map.upk", 3000)
+    write("Jeux/Photos/a.jpg", 5000)
+    r = scan(root)
+    conn = sqlite3.connect(Path(root).parent / "cache.db")
+    try:
+        clf = Classifier(software_dirs(conn, str(root)))
+    finally:
+        conn.close()
+    assert clf.classify(str(root / "Jeux" / "rocketleague" / "TAGame" / "CookedPCConsole" / "map.upk"),
+                        False).level == SOFTWARE
+    assert clf.classify(str(root / "Jeux" / "Photos" / "a.jpg"), False).level == PERSONAL
+
+
+def test_growth_headline_labels():
+    from core.history import DirDelta, HistoryDiff
+    from core.cache import ScanInfo
+    from ui.home_view import headline_growth, short_name
+
+    root = "D:\\"
+    common = root + r"SteamLibrary\steamapps\common"
+    s = ScanInfo(1, root, 0, 0, "done", 0, 0, 0, 0)
+    diff = HistoryDiff(s, s)
+    for path, delta in ((common, 250), (common + r"\Path of Exile 2", 120),
+                        (common + r"\Path of Exile 2\Bundles2\Content", 100),
+                        (common + r"\Star Wars Outlaws", 70), (common + r"\Star Wars Outlaws\data", 70),
+                        (root + "Films", 10)):
+        d = DirDelta(path, None, 0, delta, 0, 0, "modifié")
+        diff.deltas[path] = d
+        if path not in (common + r"\Path of Exile 2", common + r"\Star Wars Outlaws"):
+            diff.focus.append(d)
+    assert [(d.path, d.delta) for d in headline_growth(diff)] == [
+        (common + r"\Path of Exile 2", 120), (common + r"\Star Wars Outlaws", 70), (root + "Films", 10)]
+    assert short_name(common + r"\Path of Exile 2\Bundles2\Content", root) == "Path of Exile 2 › Content"
+    assert short_name(common + r"\Star Wars Outlaws", root) == "Star Wars Outlaws"
+    assert short_name(root + "Films", root) == "Films"

@@ -24,6 +24,43 @@ def _signed(n: int) -> str:
     return ("+" if n > 0 else "−" if n < 0 else "") + human_size(abs(n))
 
 
+_LIBRARY_DIRS = {"common", "epic games", "gog games", "xboxgames", "games", "jeux"}
+
+
+def _anchor(parts: list[str]) -> int:
+    """Index du premier dossier après une bibliothèque de jeux (common, Epic Games…), sinon 0."""
+    lowered = [p.lower() for p in parts]
+    return max((i + 1 for i, p in enumerate(lowered[:-1]) if p in _LIBRARY_DIRS), default=0)
+
+
+def short_name(path: str, root: str) -> str:
+    """Libellé court : « Path of Exile 2 › Content » plutôt que le chemin complet."""
+    parts = [p for p in display_name(path, root).split(os.sep) if p]
+    if len(parts) <= 2:
+        return os.sep.join(parts) or path
+    anchor = _anchor(parts)
+    head = parts[anchor]
+    return head if anchor == len(parts) - 1 else f"{head} › {parts[-1]}"
+
+
+def headline_growth(diff: HistoryDiff, n: int = 3) -> list:
+    """Plus fortes hausses, regroupées par jeu ou logiciel d'une bibliothèque, sans doublon
+    (un dossier qui en contient un autre de la liste est écarté)."""
+    root = diff.new.root
+    picks: dict[str, object] = {}
+    for d in diff.top(True, 15):
+        parts = [p for p in display_name(d.path, root).split(os.sep) if p]
+        anchor = _anchor(parts)
+        key = d.path
+        if anchor and len(parts) > anchor + 1:  # sous-dossier d'un jeu : on remonte au jeu
+            key = os.path.join(root, *parts[:anchor + 1])
+        picks.setdefault(key.lower(), diff.deltas.get(key) or d)
+    cands = list(picks.values())
+    keep = [d for d in cands if not any(
+        o is not d and o.path.lower().startswith(d.path.lower().rstrip(os.sep) + os.sep) for o in cands)]
+    return sorted(keep, key=lambda d: d.delta, reverse=True)[:n]
+
+
 def _dark(w: QWidget) -> bool:
     return w.palette().window().color().lightness() < 128
 
@@ -269,8 +306,8 @@ class HomeView(QWidget):
             since = diff.old.finished or diff.old.started
             self.treemap.canvas.set_growth(deltas, since)
             self.details.set_growth(deltas, since)
-            grown = diff.top(True, 3)
-            detail = ", ".join(f"{display_name(d.path, diff.new.root)} {_signed(d.delta)}" for d in grown)
+            detail = ", ".join(f"{short_name(d.path, diff.new.root)} {_signed(d.delta)}"
+                               for d in headline_growth(diff))
             self._growth_text = (
                 f"<br>Depuis le scan du {human_date(since)} : <b>{_signed(diff.total_delta)}</b>"
                 + (f" — surtout {detail}" if detail and diff.total_delta > 0 else "")

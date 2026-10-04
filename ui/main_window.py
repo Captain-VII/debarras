@@ -481,7 +481,7 @@ class MainWindow(QMainWindow):
             self._safety_worker.requestInterruption()
         app = install_dir()
         worker = SafetyWorker(self.cache.db_path, scan.id, scan.root, str(app) if app else None)
-        worker.done.connect(lambda res, sid=scan.id: self._on_safety(sid, *res))
+        worker.done.connect(lambda res, w=worker: self._safety_worker is w and self._on_safety(w.scan_id, *res))
         worker.failed.connect(lambda msg: self.statusBar().showMessage(msg, 8000))
         worker.finished.connect(lambda w=worker: self._safety_done(w))
         self._safety_worker = worker
