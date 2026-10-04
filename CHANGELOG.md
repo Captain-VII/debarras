@@ -1,5 +1,15 @@
 # Journal des versions
 
+## 1.5.2 — 2026-10-04
+
+- **Jeux mieux reconnus** : un jeu qui range ses bibliothèques dans un sous-dossier
+  (`Binaries\Win64`, `bin`…), comme Rocket League ou VALORANT, est désormais classé
+  *Logiciel* en entier, et non plus *Vos fichiers*.
+- **« Depuis le scan précédent »** : hausses regroupées par jeu ou logiciel, sans répéter un
+  dossier et ses sous-dossiers (« Path of Exile 2 +140 Go »).
+- **Synthèse de l'accueil** : elle ne peut plus afficher 0 partout quand l'analyse est relancée
+  avant la fin de la précédente.
+
 ## 1.5.1 — 2026-10-04
 
 - **Nettoyage guidé** : un très gros cache (plus de 4 Go, ex. cache des shaders NVIDIA) est
