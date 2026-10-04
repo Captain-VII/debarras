@@ -139,6 +139,12 @@ def test_cleanup_temp_and_browsers(tmp_path, monkeypatch):
     assert "ouvert" in chrome.note and not chrome.recommended
     assert cleanup.browser_targets(running=set())[0].recommended
 
+    # Dossier trop gros pour la corbeille d'un seul tenant : proposé fichier par fichier.
+    monkeypatch.setattr(cleanup, "SPLIT_SIZE", 200)
+    (cache / "data_2").write_bytes(b"z" * 100)
+    split = cleanup.browser_targets(running=set())[0]
+    assert sorted(split.paths) == [str(cache / "data_1"), str(cache / "data_2")] and split.size == 400
+
 
 @pytest.mark.usefixtures("fake_home")
 def test_home_and_cleanup_views(qapp, root, write, db, scan, monkeypatch):

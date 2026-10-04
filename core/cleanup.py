@@ -17,6 +17,7 @@ from typing import Callable
 from PySide6.QtCore import QThread, Signal
 
 TRASH_KIND, WINDOWS_KIND, RECYCLE_KIND = "trash", "windows", "recycle"
+SPLIT_SIZE = 4 * 1024 ** 3  # au-delà, un dossier est proposé élément par élément (voir _add)
 TEMP_MIN_AGE = 24 * 3600   # fichiers temporaires plus récents : peut-être en cours d'utilisation
 
 # Navigateurs Chromium : dossier « User Data » relatif à %LOCALAPPDATA%, processus.
@@ -94,10 +95,21 @@ def running_processes() -> set[str]:
 
 def _add(t: Target, path: str, cancelled) -> None:
     size, count, _ = measure(path, cancelled)
-    if count:
-        t.paths.append(path)
-        t.sizes[path] = size
-        t.count += count
+    if not count:
+        return
+    if size > SPLIT_SIZE and os.path.isdir(path):
+        # Trop gros pour un seul élément de corbeille : Windows le refuse (erreur 161)
+        # plutôt que de le supprimer définitivement. On propose son contenu à la place.
+        try:
+            children = [e.path for e in os.scandir(path)]
+        except OSError:
+            children = []
+        for child in children:
+            _add(t, child, cancelled)
+        return
+    t.paths.append(path)
+    t.sizes[path] = size
+    t.count += count
 
 
 def _local() -> Path:
