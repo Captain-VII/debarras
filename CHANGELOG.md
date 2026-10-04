@@ -1,5 +1,16 @@
 # Journal des versions
 
+## 1.5.1 — 2026-10-04
+
+- **Nettoyage guidé** : un très gros cache (plus de 4 Go, ex. cache des shaders NVIDIA) est
+  proposé fichier par fichier. En 1.5.0, Windows refusait de le mettre à la corbeille d'un
+  seul bloc (erreur « chemin non valide ») et rien n'était nettoyé.
+- **Corbeille trop petite** : avant toute mise à la corbeille, Débarras vérifie sa place.
+  Si la sélection dépasse sa capacité ou sa place libre — Windows effacerait alors
+  définitivement des éléments — ou si la corbeille est désactivée sur le lecteur, l'action
+  est bloquée avec la marche à suivre (vider la corbeille, sélectionner moins, archiver ou
+  déplacer).
+
 ## 1.5.0 — 2026-10-04
 
 - **Nouvelle page d'accueil** : le treemap, coloré selon ce que vous pouvez supprimer sans

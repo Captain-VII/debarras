@@ -1,4 +1,4 @@
 """Version de Débarras : seule source de vérité (exe, « À propos », mises à jour, releases)."""
 
-__version__ = "1.5.0"
+__version__ = "1.5.1"
 GITHUB_REPO = "Captain-VII/debarras"   # releases publiques consultées par la mise à jour

@@ -183,3 +183,37 @@ def test_home_and_cleanup_views(qapp, root, write, db, scan, monkeypatch):
     QApplication.processEvents()
     view._request()
     assert got and sorted(got[0][0]) == ["A", "B"] and got[0][1] == {"A": 5, "B": 7}
+
+
+def test_recycle_capacity_guard(qapp, tmp_path, monkeypatch):
+    from core import recycle
+    from core.actions import ARCHIVE, TRASH
+    from ui import actions_ui
+
+    def fake(drive, capacity=1000, used=0, disabled=False):
+        return lambda d: recycle.BinInfo(d, capacity, used, disabled)
+
+    a, b = str(tmp_path / "a"), str(tmp_path / "b")
+    sizes = {a: 400, b: 400}
+    assert recycle.capacity_problems([a, b], sizes, fake(None)) == []
+    assert "place libre" in recycle.capacity_problems([a, b], sizes, fake(None, used=300))[0]
+    assert "dépasse la capacité" in recycle.capacity_problems([a], {a: 2000}, fake(None))[0]
+    assert "désactivée" in recycle.capacity_problems([a], sizes, fake(None, disabled=True))[0]
+    assert recycle.capacity_problems([a], sizes, fake(None, capacity=None)) == []   # inconnue
+
+    monkeypatch.setattr(actions_ui, "capacity_problems", lambda p, s: ["trop gros"])
+    (tmp_path / "a").write_text("x")
+    dlg = actions_ui.ConfirmDialog(TRASH, [a], sizes, simulated=False)
+    assert not dlg.ok.isEnabled()                              # jamais de suppression définitive
+    assert actions_ui.ConfirmDialog(TRASH, [a], sizes, simulated=True).ok.isEnabled()
+    arch = actions_ui.ConfirmDialog(ARCHIVE, [a], sizes, simulated=False)
+    arch.target.setText(str(tmp_path / "x.zip"))
+    assert not arch.ok.isEnabled()
+    arch.trash_originals.setChecked(False)                     # originaux gardés : plus de risque
+    assert arch.ok.isEnabled()
+
+
+def test_bin_info_reads_real_drive():
+    from core.recycle import bin_info
+    b = bin_info(os.environ.get("SystemDrive", "C:") + "\\")
+    assert b.used >= 0 and (b.capacity is None or b.capacity > 0)

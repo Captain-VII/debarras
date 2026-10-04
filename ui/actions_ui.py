@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from core import safety
+from core.recycle import capacity_problems
 from core.actions import (
     ARCHIVE, DONE, ERROR, KIND_LABELS, MOVE, RESTORED, SIMULATED, SKIPPED, TRASH, ActionLog,
     ActionRecord, ActionWorker, plan,
@@ -131,15 +132,35 @@ class ConfirmDialog(QDialog):
         else:
             self.understood.setChecked(True)
 
+        # Corbeille trop petite : Windows effacerait définitivement (jamais permis, sauf simulation).
+        self.simulated = simulated
+        self.bin_problems = capacity_problems(paths, sizes) if kind in (TRASH, ARCHIVE) else []
+        self.bin_box = QLabel("🛑 <b>La corbeille ne peut pas tout recevoir :</b><br>" + "<br>".join(
+            _esc(b) for b in self.bin_problems))
+        self.bin_box.setWordWrap(True)
+        self.bin_box.setStyleSheet(_RISK_STYLE.format(color="#d03b3b"))
+        layout.addWidget(self.bin_box)
+
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
         self.ok = buttons.addButton("Simuler" if simulated else "Confirmer",
                                     QDialogButtonBox.ButtonRole.AcceptRole)
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
-        if warnings:
-            self.ok.setEnabled(False)
-            self.understood.toggled.connect(self.ok.setEnabled)
+        self.understood.toggled.connect(self._refresh_ok)
+        self.trash_originals.toggled.connect(self._refresh_ok)
+        self._refresh_ok()
+
+    def _bin_blocks(self) -> bool:
+        """Problème de corbeille applicable (archivage : seulement si les originaux y vont)."""
+        if not self.bin_problems or (self.kind == ARCHIVE and not self.trash_originals.isChecked()):
+            return False
+        return True
+
+    def _refresh_ok(self) -> None:
+        blocks = self._bin_blocks()
+        self.bin_box.setVisible(blocks)
+        self.ok.setEnabled(self.understood.isChecked() and (not blocks or self.simulated))
 
     def _browse(self, paths: list[str]) -> None:
         start = os.path.dirname(paths[0]) if paths else ""
