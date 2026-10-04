@@ -36,8 +36,8 @@ def _anchor(parts: list[str]) -> int:
 def short_name(path: str, root: str) -> str:
     """Libellé court : « Path of Exile 2 › Content » plutôt que le chemin complet."""
     parts = [p for p in display_name(path, root).split(os.sep) if p]
-    if len(parts) <= 2:
-        return os.sep.join(parts) or path
+    if len(parts) <= 1:
+        return parts[0] if parts else path
     anchor = _anchor(parts)
     head = parts[anchor]
     return head if anchor == len(parts) - 1 else f"{head} › {parts[-1]}"

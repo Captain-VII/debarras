@@ -20,6 +20,30 @@
 - **Historique** des scans (ce qui a grossi ou diminué), **recherche** avec filtres,
   **exports** CSV et rapport HTML, thème clair/sombre, **mise à jour automatique**.
 
+## Aperçu
+
+**Accueil** — le disque en un coup d'œil, coloré selon ce que vous pouvez supprimer sans
+risque : rouge *Système* (bloqué), orange *Logiciel* (déconseillé), vert *Vos fichiers*,
+bleu *Nettoyable*. Le panneau de droite explique l'élément sélectionné.
+
+![Accueil : treemap coloré par niveau de sécurité et panneau de détail](docs/screenshots/accueil.png)
+
+**Évolution** — ce qui a grossi depuis le scan précédent, résumé en haut et sur la carte.
+
+![Coloriage « Évolution » : dossiers qui ont grossi et fichiers nouveaux](docs/screenshots/evolution.png)
+
+**Nettoyage guidé** — fichiers temporaires, caches des navigateurs, rapports d'erreurs, cache
+des shaders ; Windows Update via l'outil de Windows. Tout passe par la corbeille.
+
+![Onglet Nettoyage : emplacements recréés automatiquement, avec leur taille](docs/screenshots/nettoyage.png)
+
+**Garde-fous** — supprimer un élément de logiciel demande une confirmation explicite ; un
+élément système ne peut pas être supprimé.
+
+<img src="docs/screenshots/confirmation.png" width="560" alt="Confirmation avant de mettre un jeu à la corbeille">
+
+<sub>Captures réalisées sur un disque de démonstration fictif (`tools/make_screenshots.py`).</sub>
+
 ## Installation
 
 Téléchargez `Debarras-<version>-setup.exe` depuis la page
@@ -47,6 +71,9 @@ python -m venv .venv
 powershell -ExecutionPolicy Bypass -File build.ps1     # exe dans dist\Debarras + installateur
 powershell -ExecutionPolicy Bypass -File release.ps1   # archive et installateur de release (+ -Publish)
 ```
+
+Captures du README : `.venv\Scripts\python tools\make_screenshots.py` (disque de démonstration
+fictif en fichiers creux, monté sur une lettre libre ; rien n'est lu ni écrit chez vous).
 
 L'installateur est construit avec [Inno Setup 6](https://jrsoftware.org/isinfo.php)
 (`installer/debarras.iss`) s'il est présent.
