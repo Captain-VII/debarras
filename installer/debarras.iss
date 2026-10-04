@@ -63,6 +63,9 @@ Filename: "{app}\Debarras.exe"; Description: "Lancer Débarras"; Flags: nowait p
 [UninstallDelete]
 ; Ancienne version gardée en secours par la mise à jour automatique.
 Type: filesandordirs; Name: "{app}.old"
+; Dossiers vidés par la désinstallation (parfois retenus un instant par l'indexation).
+Type: dirifempty; Name: "{app}\licenses"
+Type: dirifempty; Name: "{app}"
 
 [Code]
 // Désinstallation : propose (sans l'imposer) d'effacer aussi cache, paramètres et journal.
