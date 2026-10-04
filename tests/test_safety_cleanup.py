@@ -258,3 +258,4 @@ def test_growth_headline_labels():
     assert short_name(common + r"\Path of Exile 2\Bundles2\Content", root) == "Path of Exile 2 › Content"
     assert short_name(common + r"\Star Wars Outlaws", root) == "Star Wars Outlaws"
     assert short_name(root + "Films", root) == "Films"
+    assert short_name(r"C:\Users\moi\projet\dist", "C:\\") == "projet › dist"   # pas « Users › dist »

@@ -39,6 +39,8 @@ def short_name(path: str, root: str) -> str:
     if len(parts) <= 1:
         return parts[0] if parts else path
     anchor = _anchor(parts)
+    if not anchor:  # hors bibliothèque de jeux : dossier parent › dossier
+        return f"{parts[-2]} › {parts[-1]}"
     head = parts[anchor]
     return head if anchor == len(parts) - 1 else f"{head} › {parts[-1]}"
 
