@@ -1,5 +1,11 @@
 # Journal des versions
 
+## 1.5.4 — 2026-10-04
+
+- Résumé « Depuis le scan précédent » : hors bibliothèque de jeux, chaque hausse est nommée
+  par son dossier parent et le dossier lui-même (« file_analyzer › dist » au lieu de
+  « Users › dist »).
+
 ## 1.5.3 — 2026-10-04
 
 - Résumé « Depuis le scan précédent » : libellés homogènes (« Utilisateur › Téléchargements »).
