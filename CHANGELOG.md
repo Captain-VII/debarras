@@ -1,5 +1,10 @@
 # Journal des versions
 
+## 1.5.3 — 2026-10-04
+
+- Résumé « Depuis le scan précédent » : libellés homogènes (« Utilisateur › Téléchargements »).
+- README : captures d'écran (réalisées sur un disque de démonstration fictif).
+
 ## 1.5.2 — 2026-10-04
 
 - **Jeux mieux reconnus** : un jeu qui range ses bibliothèques dans un sous-dossier
