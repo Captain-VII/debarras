@@ -186,7 +186,7 @@ def test_dialog_and_controller_without_network(qapp, monkeypatch):
     assert "Ouvrir la page de téléchargement" in labels and "Installer et redémarrer" not in labels
 
     class FakeSettings:
-        check_updates, last_update_check, skipped_version = True, 0.0, ""
+        check_updates, last_update_check, skipped_version, auto_install = True, 0.0, "", False
         def save(self):
             pass
 
@@ -209,12 +209,59 @@ def test_dialog_and_controller_without_network(qapp, monkeypatch):
     monkeypatch.delenv("DEBARRAS_NO_UPDATE_CHECK", raising=False)
     called = []
     monkeypatch.setattr(ctl, "check", lambda manual=True: called.append(manual))
-    ctl._auto_check()                            # vérifié il y a moins de 24 h : rien
-    assert called == []
-    win.settings.last_update_check = 0
-    ctl._auto_check()
+    import time as _time
+    win.settings.last_update_check = _time.time()
+    ctl._auto_check()                            # à chaque démarrage, même vérifié il y a peu
+    assert called == [False]
+    win.settings.check_updates = False
+    ctl._auto_check()                            # désactivé dans les paramètres
     assert called == [False]
     os.environ["DEBARRAS_NO_UPDATE_CHECK"] = "1"
+
+
+def test_silent_update_installed_on_exit(qapp, monkeypatch, tmp_path):
+    """Mode automatique : téléchargée sans rien demander, installée à la fermeture sans relance."""
+    from PySide6.QtWidgets import QWidget
+
+    import ui.update_ui as uu
+
+    rel = Release("9.9.9", "v9.9.9", "notes", "https://example.invalid", "Debarras-9.9.9-win64.zip",
+                  "https://example.invalid/x.zip", 1, "a" * 64)
+
+    class FakeSettings:
+        check_updates, last_update_check, skipped_version, auto_install = True, 0.0, "", True
+        def save(self):
+            pass
+
+    win = QWidget()
+    win.settings = FakeSettings()
+    ctl = uu.UpdateController(win)
+    monkeypatch.setattr(uu, "can_self_update", lambda: True)
+    monkeypatch.setattr(uu.UpdateDialog, "exec", lambda self: pytest.fail("aucune fenêtre en mode automatique"))
+    downloads = []
+    monkeypatch.setattr(ctl, "_download", lambda r, silent=False: downloads.append((r.version, silent)))
+    ctl._on_checked(rel, manual=False)
+    assert downloads == [("9.9.9", True)]
+
+    ctl._silent = True
+    ctl._on_ready(rel, tmp_path / "staged")
+    assert not ctl.ready_btn.isHidden() and "9.9.9" in ctl.ready_btn.text()
+    scripts = []
+    monkeypatch.setattr(uu, "install_dir", lambda: tmp_path / "app")
+    monkeypatch.setattr(uu, "write_swap_script",
+                        lambda pid, install, staged, started=None, relaunch=True: scripts.append(relaunch) or tmp_path)
+    monkeypatch.setattr(uu, "launch_swap", lambda script: None)
+    monkeypatch.setattr(uu, "wait_started", lambda marker, timeout=15, tick=None: True)
+    ctl.install_on_exit()
+    assert scripts == [False] and ctl._ready is None
+    ctl.install_on_exit()                        # une seule fois
+    assert scripts == [False]
+
+
+def test_swap_script_without_relaunch(tmp_path):
+    script = write_swap_script(1, tmp_path / "app", tmp_path / "staged", folder=tmp_path, relaunch=False)
+    text = script.read_text(encoding="utf-8-sig")
+    assert "Start-Process" not in text and "Move-Item" in text
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="registre Windows")

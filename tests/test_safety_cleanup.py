@@ -43,6 +43,12 @@ def fake_home(tmp_path, monkeypatch):
     (r"D:\projet\node_modules", True, CLEANABLE),
     (r"D:\projet\src\__pycache__", True, CLEANABLE),
     (r"D:\Photos\vacances.jpg", False, PERSONAL),
+    (os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), True, SYSTEM),
+    (os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)") + r"\Steam\steamapps\common\Jeu", True, SOFTWARE),
+    (os.environ.get("ProgramFiles", r"C:\Program Files") + r"\Common Files\x", True, SYSTEM),
+    (os.environ.get("ProgramFiles", r"C:\Program Files") + r"\WindowsApps", True, SYSTEM),
+    (os.environ.get("ProgramFiles", r"C:\Program Files") + r"\VideoLAN\VLC", True, SOFTWARE),
+    (os.environ.get("ProgramData", r"C:\ProgramData") + r"\NVIDIA", True, SYSTEM),
 ])
 def test_rules(path, is_dir, level, monkeypatch):
     monkeypatch.setenv("LOCALAPPDATA", str(HOME / "AppData" / "Local"))

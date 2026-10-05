@@ -1,5 +1,17 @@
 # Journal des versions
 
+## 1.6.1 — 2026-10-05
+
+- **Mises à jour vraiment automatiques** : vérification à chaque démarrage puis toutes les
+  6 heures (au lieu d'une fois par jour), téléchargement en arrière-plan (empreinte SHA-256
+  vérifiée) et installation à la fermeture de Débarras — sans fenêtre à valider. Un bouton
+  dans la barre d'état permet de redémarrer tout de suite. Pour être prévenu avant chaque
+  mise à jour : *Fichier › Paramètres*.
+- **Steam dans Program Files** : les jeux installés dans `C:\Program Files (x86)\Steam` étaient
+  classés *Système* ; ils sont désormais *Logiciel*, comme les autres programmes installés.
+  Seuls la racine de Program Files et les composants de Windows (Common Files, WindowsApps…)
+  restent bloqués.
+
 ## 1.6.0 — 2026-10-05
 
 Plus simple, plus complet, d'après vos retours.

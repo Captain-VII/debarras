@@ -61,6 +61,12 @@ _ROOT_SYSTEM_DIRS = {"system volume information", "recovery", "boot", "efi", "$r
 _PROFILE_SYSTEM = ("ntuser.", "usrclass.dat")  # registre de l'utilisateur
 _USERS_SYSTEM = {"default", "default user", "all users"}
 
+# Sous-dossiers de Program Files qui font partie de Windows (bloqués comme le système).
+_WINDOWS_PROGRAMS = {"common files", "windowsapps", "windows defender", "windows defender advanced threat protection",
+                     "windows mail", "windows media player", "windows nt", "windows photo viewer",
+                     "windows portable devices", "windows security", "windows sidebar", "windowspowershell",
+                     "internet explorer", "microsoft update health tools", "modifiablewindowsapps", "reference assemblies",
+                     "msbuild", "uninstall information", "installshield installation information", "dotnet"}
 # Bibliothèques de jeux : à désinstaller depuis le lanceur, pas à la main.
 _GAME_DIRS = {"steamapps": "Steam", "steamlibrary": "Steam", "epic games": "Epic Games",
               "gog games": "GOG", "gog galaxy": "GOG", "xboxgames": "Xbox", "riot games": "Riot",
@@ -98,9 +104,12 @@ class Classifier:
         env = os.environ
         home = Path.home()
         self.system_roots = [(_n(x), x) for x in (
-            env.get("SystemRoot", r"C:\Windows"), env.get("ProgramFiles", r"C:\Program Files"),
-            env.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), env.get("ProgramW6432", ""),
-            env.get("ProgramData", r"C:\ProgramData")) if x]
+            env.get("SystemRoot", r"C:\Windows"), env.get("ProgramData", r"C:\ProgramData")) if x]
+        # Program Files : logiciels installés (orange), sauf leur racine et les composants de Windows.
+        self.program_roots = [(_n(x), x) for x in dict.fromkeys(
+            env.get(k, d) for k, d in (("ProgramFiles", r"C:\Program Files"),
+                                        ("ProgramFiles(x86)", r"C:\Program Files (x86)"),
+                                        ("ProgramW6432", r"C:\Program Files"))) if x]
         self.home = _n(home)
         self.users = _n(home.parent)
         local = env.get("LOCALAPPDATA") or str(home / "AppData" / "Local")
@@ -135,7 +144,19 @@ class Classifier:
             return Verdict(SYSTEM, "Racine du lecteur")
         for root, shown in self.system_roots:
             if _under(p, root):
-                return Verdict(SYSTEM, f"Dossier de Windows ou des programmes installés ({shown})")
+                return Verdict(SYSTEM, f"Dossier de Windows ({shown})")
+        for root, shown in self.program_roots:
+            if not _under(p, root):
+                continue
+            inner = p[len(root) + 1:].split("\\") if p != root else []
+            if not inner:
+                return Verdict(SYSTEM, f"Dossier des programmes installés ({shown})")
+            game = next((_GAME_DIRS[x] for x in inner if x in _GAME_DIRS), None)
+            if game:
+                return Verdict(SOFTWARE, f"Bibliothèque de jeux {game} : désinstallez depuis le lanceur")
+            if inner[0] in _WINDOWS_PROGRAMS or inner[0].startswith(("windows ", "microsoft.net")):
+                return Verdict(SYSTEM, "Composant de Windows")
+            return Verdict(SOFTWARE, "Logiciel installé : désinstallez-le depuis Paramètres › Applications")
         if len(parts) == 1 and (name in _ROOT_SYSTEM_DIRS or (not is_dir and name in _ROOT_SYSTEM_FILES)):
             return Verdict(SYSTEM, "Fichier ou dossier système à la racine du lecteur")
         if "$recycle.bin" in parts:

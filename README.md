@@ -21,7 +21,8 @@
 - **Actions sûres** : corbeille, déplacement, archive ZIP vérifiée. Jamais de suppression
   définitive, confirmation systématique, mode simulation, journal, annulation (Ctrl+Z).
 - **Historique** des scans (ce qui a grossi ou diminué), **recherche** avec filtres,
-  **exports** CSV et rapport HTML, thème clair/sombre, **mise à jour automatique**.
+  **exports** CSV et rapport HTML, thème clair/sombre, **mise à jour automatique**
+  (téléchargée en arrière-plan, installée à la fermeture).
 
 ## Aperçu
 

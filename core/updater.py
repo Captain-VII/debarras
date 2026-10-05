@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -31,6 +32,15 @@ from PySide6.QtCore import QThread, Signal
 from version import GITHUB_REPO, __version__
 
 API = "https://api.github.com"
+
+
+def _api() -> str:
+    """API des releases. DEBARRAS_UPDATE_API (tests de bout en bout) n'est accepté que pour une
+    adresse locale : impossible de détourner les mises à jour vers un autre serveur."""
+    test = os.environ.get("DEBARRAS_UPDATE_API", "")
+    if test.startswith(("http://127.0.0.1:", "http://localhost:")):
+        return test.rstrip("/")
+    return API
 EXE_NAME = "Debarras.exe"
 ASSET_RE = re.compile(r"^Debarras-(\d+(?:\.\d+)*)-win64\.zip$", re.IGNORECASE)
 TIMEOUT = 15
@@ -74,8 +84,9 @@ def _get(url: str, accept: str = "application/vnd.github+json"):
     return urllib.request.urlopen(req, timeout=TIMEOUT)  # noqa: S310 - URL HTTPS construite ici
 
 
-def fetch_latest(repo: str = GITHUB_REPO, api: str = API) -> Release | None:
+def fetch_latest(repo: str = GITHUB_REPO, api: str | None = None) -> Release | None:
     """Dernière release publiée (hors brouillons/préversions), ou None si pas d'archive Windows."""
+    api = api or _api()
     try:
         with _get(f"{api}/repos/{repo}/releases/latest") as resp:
             data = json.load(resp)
@@ -171,13 +182,14 @@ def _ps(value: str | Path) -> str:
 
 
 def write_swap_script(pid: int, install: Path, staged: Path, exe_name: str = EXE_NAME,
-                      folder: Path | None = None, started: Path | None = None) -> Path:
+                      folder: Path | None = None, started: Path | None = None, relaunch: bool = True) -> Path:
     """Script PowerShell de remplacement (exécuté après la fermeture de Débarras).
 
     `started` : fichier témoin créé dès le démarrage du script ; Débarras attend de le voir
     avant de se fermer (sinon l'utilisateur se retrouverait sans application ni mise à jour).
     """
     backup = install.with_name(install.name + ".old")
+    start = "Start-Process -FilePath (Join-Path $install $exe)" if relaunch else "# installation à la fermeture : pas de relance"
     signal = f"New-Item -ItemType File -Force -Path {_ps(started)} | Out-Null\n" if started else ""
     script = f"""$ErrorActionPreference = 'Stop'
 {signal}$install = {_ps(install)}; $staged = {_ps(staged)}; $backup = {_ps(backup)}; $exe = {_ps(exe_name)}
@@ -196,12 +208,12 @@ try {{
     # Désinstalleur de l'installateur (absent de l'archive) : conservé dans la nouvelle version.
     Get-ChildItem -LiteralPath $backup -Filter 'unins*' -File | Copy-Item -Destination $staged -Force
     Move-Item -LiteralPath $staged -Destination $install
-    Start-Process -FilePath (Join-Path $install $exe)
+    {start}
 }} catch {{
     if ($moved -and -not (Test-Path -LiteralPath $install)) {{
         Rename-Item -LiteralPath $backup -NewName (Split-Path $install -Leaf)
     }}
-    Start-Process -FilePath (Join-Path $install $exe)
+    {start}
     exit 1
 }}
 """
@@ -242,7 +254,7 @@ class UpdateChecker(QThread):
     done = Signal(object)    # Release plus récente, ou None
     failed = Signal(str)
 
-    def __init__(self, repo: str = GITHUB_REPO, api: str = API, parent=None) -> None:
+    def __init__(self, repo: str = GITHUB_REPO, api: str | None = None, parent=None) -> None:
         super().__init__(parent)
         self.repo, self.api = repo, api
 

@@ -25,7 +25,8 @@ class Settings:
     blacklist: list[str] = field(default_factory=list)   # ignorés au scan (motifs sur le nom)
     whitelist: list[str] = field(default_factory=list)   # protégés : jamais traités par les actions
     theme: str = "system"
-    check_updates: bool = True        # vérifier les nouvelles versions au démarrage (1×/jour)
+    check_updates: bool = True        # vérifier les nouvelles versions (au démarrage, puis toutes les 6 h)
+    auto_install: bool = True         # télécharger seul et installer à la fermeture
     last_update_check: float = 0.0
     skipped_version: str = ""         # version que l'utilisateur a choisi d'ignorer
     advanced: bool = False            # mode avancé : tous les onglets et le choix libre du dossier
@@ -136,10 +137,14 @@ class SettingsDialog(QDialog):
         look = QGroupBox("Apparence et mises à jour")
         ll = QFormLayout(look)
         ll.addRow("Thème :", self.theme)
-        self.updates = QCheckBox("Vérifier les nouvelles versions au démarrage (une fois par jour)")
+        self.updates = QCheckBox("Vérifier les nouvelles versions (au démarrage, puis toutes les 6 heures)")
         self.updates.setToolTip("Consulte les releases publiques de Débarras sur GitHub. "
                                 "Aucune donnée n'est envoyée.")
         ll.addRow(self.updates)
+        self.auto_install = QCheckBox("Installer automatiquement les mises à jour (à la fermeture de Débarras)")
+        self.auto_install.setToolTip("Sinon, Débarras demande avant chaque mise à jour.")
+        self.updates.toggled.connect(self.auto_install.setEnabled)
+        ll.addRow(self.auto_install)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
                                    | QDialogButtonBox.StandardButton.RestoreDefaults)
@@ -162,6 +167,8 @@ class SettingsDialog(QDialog):
     def _fill(self, s: Settings) -> None:
         self._state = (s.last_update_check, s.skipped_version, s.advanced)  # non éditables, conservés
         self.updates.setChecked(s.check_updates)
+        self.auto_install.setChecked(s.auto_install)
+        self.auto_install.setEnabled(s.check_updates)
         self.paths.clear()
         self.paths.addItems(s.excluded_paths)
         self.names.setText(", ".join(s.excluded_names))
@@ -187,6 +194,7 @@ class SettingsDialog(QDialog):
             whitelist=_lines(self.white),
             theme=self.theme.currentData(),
             check_updates=self.updates.isChecked(),
+            auto_install=self.auto_install.isChecked(),
             last_update_check=self._state[0],
             skipped_version=self._state[1],
             advanced=self._state[2],

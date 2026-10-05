@@ -38,9 +38,9 @@ Cancelled = Callable[[], bool]
 
 def _protected_roots() -> list[str]:
     env = os.environ
-    roots = [env.get("SystemRoot", r"C:\Windows"), env.get("ProgramFiles", r"C:\Program Files"),
-             env.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
-             env.get("ProgramData", r"C:\ProgramData")]
+    # Program Files est géré par le classement (racine et composants Windows bloqués,
+    # logiciels et jeux : confirmation explicite).
+    roots = [env.get("SystemRoot", r"C:\Windows"), env.get("ProgramData", r"C:\ProgramData")]
     return [os.path.normcase(os.path.normpath(r)) for r in roots]
 
 
