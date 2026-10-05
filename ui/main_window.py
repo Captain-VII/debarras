@@ -16,6 +16,8 @@ from PySide6.QtWidgets import (
 from core import safety
 from core.actions import TRASH, ActionRecord
 from core.cache import Cache, ScanInfo
+from core.cleanup import auto_selection
+from core.drives import drive_of, is_admin, list_drives, relaunch_as_admin
 from core.safety import SafetyWorker
 from core.scanner import Scanner, ScanResult
 from core.stats import StatsResult, StatsWorker
@@ -67,11 +69,15 @@ class MainWindow(QMainWindow):
         self.cancel_btn.setEnabled(False)
         self.cancel_btn.clicked.connect(self._cancel_scan)
 
+        self.path_bar = QWidget()
+        bar = QHBoxLayout(self.path_bar)
+        bar.setContentsMargins(0, 0, 0, 0)
+        bar.addWidget(QLabel("Dossier :"))
+        bar.addWidget(self.path_box, 1)
+        bar.addWidget(browse_btn)
+        bar.addWidget(self.scan_btn)
         top = QHBoxLayout()
-        top.addWidget(QLabel("Dossier :"))
-        top.addWidget(self.path_box, 1)
-        top.addWidget(browse_btn)
-        top.addWidget(self.scan_btn)
+        top.addWidget(self.path_bar, 1)
         top.addWidget(self.cancel_btn)
         self.sim_label = QLabel("SIMULATION")
         self.sim_label.setStyleSheet(SIM_STYLE)
@@ -112,13 +118,19 @@ class MainWindow(QMainWindow):
         self.home.open_cleanup.connect(lambda: self.tabs.setCurrentWidget(self.cleanup_view))
         self.home.open_history.connect(lambda: self.tabs.setCurrentWidget(self.history_view))
         self.history_view.diff_ready.connect(self._on_diff)
+        self.home.open_drive.connect(self._open_drive)
+        self.home.scan_drive.connect(self._scan_drive)
+        self.home.auto_clean.connect(self._auto_clean)
+        self.home.relaunch_admin.connect(self._relaunch_admin)
+        self.cleanup_view.targets_ready.connect(self._on_cleanup_targets)
+        self._auto: tuple[list[str], dict[str, int]] = ([], {})
         self._safety_worker: SafetyWorker | None = None
         self.stats_view.old_days_changed.connect(lambda _: self._compute_stats())
         self._stats_workers: set[StatsWorker] = set()
         self.tree.show_in_treemap.connect(self._show_in_treemap)
         self.search_view.show_in_treemap.connect(self._show_in_treemap)
         self.treemap.canvas.item_selected.connect(
-            lambda path, size: self.statusBar().showMessage(f"{path} — {human_size(size)}")
+            lambda path, size: path.startswith("::") or self.statusBar().showMessage(f"{path} — {human_size(size)}")
         )
 
         # Actions (corbeille, déplacement, archivage)
@@ -133,6 +145,10 @@ class MainWindow(QMainWindow):
         self._apply_settings()
         self._build_menu()
         self.updates.schedule_auto_check()
+        self._apply_mode()
+        self._refresh_drives()
+        self.home.set_auto_clean(None)
+        self.cleanup_view.analyze()   # taille du nettoyage automatique, en arrière-plan
 
         layout = QVBoxLayout()
         layout.addLayout(top)
@@ -168,6 +184,12 @@ class MainWindow(QMainWindow):
         self._action(file_menu, "Quitter", self.close, QKeySequence.StandardKey.Quit)
 
         view_menu = bar.addMenu("A&ffichage")
+        self.advanced_action = QAction("Mode avancé (tous les onglets, n'importe quel dossier)", self,
+                                       checkable=True)
+        self.advanced_action.setChecked(self.settings.advanced)
+        self.advanced_action.toggled.connect(self._set_advanced)
+        view_menu.addAction(self.advanced_action)
+        view_menu.addSeparator()
         self._action(view_menu, "Rechercher…", self._focus_search, QKeySequence.StandardKey.Find)
         theme_menu = view_menu.addMenu("Thème")
         self._theme_group = QActionGroup(self)
@@ -190,6 +212,73 @@ class MainWindow(QMainWindow):
         help_menu = bar.addMenu("&Aide")
         self._action(help_menu, "Rechercher des mises à jour…", lambda: self.updates.check(manual=True))
         self._action(help_menu, "À propos de Débarras", self._about)
+
+    # --- mode simple / avancé ---------------------------------------------------------------
+
+    SIMPLE_TABS = ("home", "cleanup_view")
+
+    def _apply_mode(self) -> None:
+        """Mode simple : disques, accueil et nettoyage seulement. Avancé : tout."""
+        adv = self.settings.advanced
+        self.path_bar.setVisible(adv)
+        self.cancel_btn.setVisible(adv or self.scanner is not None)
+        simple = {getattr(self, n) for n in self.SIMPLE_TABS}
+        for i in range(self.tabs.count()):
+            self.tabs.setTabVisible(i, adv or self.tabs.widget(i) in simple)
+        if not adv and self.tabs.currentWidget() not in simple:
+            self.tabs.setCurrentWidget(self.home)
+
+    def _set_advanced(self, on: bool) -> None:
+        self.settings.advanced = on
+        try:
+            self.settings.save()
+        except OSError:
+            pass
+        self._apply_mode()
+
+    # --- disques -------------------------------------------------------------------------
+
+    def _refresh_drives(self) -> None:
+        scans = {}
+        for d in list_drives():
+            s = self.cache.latest_scan(d.root)
+            if s:
+                scans[os.path.normcase(d.root)] = s
+        self.home.drives.refresh(list_drives(), scans, self.current_scan.root if self.current_scan else "")
+
+    def _open_drive(self, root: str) -> None:
+        self._set_root(root)
+        if not self._load_latest(root):
+            self.start_scan()
+
+    def _scan_drive(self, root: str) -> None:
+        self._set_root(root)
+        self.start_scan()
+
+    def _relaunch_admin(self) -> None:
+        root = self.current_scan.root if self.current_scan else self._root()
+        answer = QMessageBox.question(
+            self, "Analyser en administrateur",
+            "Débarras va se relancer avec les droits administrateur (Windows demandera "
+            "confirmation) pour analyser aussi les dossiers protégés.\n\nLes dossiers système "
+            "restent protégés : rien n'y sera supprimé.")
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        if relaunch_as_admin([root] if root else []):
+            self.close()
+        else:
+            QMessageBox.information(self, "Analyser en administrateur", "Relance annulée.")
+
+    # --- nettoyage automatique -----------------------------------------------------------
+
+    def _on_cleanup_targets(self, targets: list) -> None:
+        self._auto = auto_selection(targets)
+        self.home.set_auto_clean(sum(self._auto[1].values()))
+
+    def _auto_clean(self) -> None:
+        paths, sizes = self._auto
+        if paths:
+            self.actions.request(TRASH, paths, sizes)
 
     # --- paramètres et thème ------------------------------------------------------------
 
@@ -320,8 +409,7 @@ class MainWindow(QMainWindow):
     def _on_action_done(self, rec: ActionRecord) -> None:
         if rec.simulated:
             return
-        if self.cleanup_view.analyzed:
-            self.cleanup_view.analyze()
+        self.cleanup_view.analyze()  # tailles à jour (onglet et bouton automatique)
         # Les fichiers ont bougé : rescan incrémental (hash conservés) pour rafraîchir les vues.
         self.dup_view.prune_missing()
         self.similar_view.prune_missing()
@@ -386,6 +474,8 @@ class MainWindow(QMainWindow):
     def _set_scanning(self, on: bool) -> None:
         self.scan_btn.setEnabled(not on)
         self.cancel_btn.setEnabled(on)
+        self.cancel_btn.setVisible(on or self.settings.advanced)
+        self.home.drives.setEnabled(not on)
         self.path_box.setEnabled(not on)
         self.progress_bar.setVisible(on)
 
@@ -423,6 +513,7 @@ class MainWindow(QMainWindow):
         scan = self.cache.latest_scan(root) if root else None
         self.current_scan = scan
         self._stats = None
+        self._refresh_drives()  # carte du disque affiché mise en évidence
         if scan is None:
             self.tree.clear()
             self.home.clear()
@@ -438,7 +529,11 @@ class MainWindow(QMainWindow):
         self.tree.load(self.cache, scan.id, scan.root)
         self.home.set_growth(None)
         self.treemap.load(self.cache, scan.id, scan.root)
+        drive = drive_of(scan.root)
+        if drive:  # disque entier : la carte montre aussi l'espace libre et le non-analysé
+            self.treemap.canvas.set_extras(drive.free, max(drive.used - scan.total_size, 0))
         self.home.set_loading(scan.root, scan.total_size)
+        self.home.set_context(drive, scan.errors, is_admin())
         self._classify(scan)
         self._compute_stats()
         self.dup_view.set_scan(self.cache.db_path, scan.root)

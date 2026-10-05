@@ -5,6 +5,9 @@
 **Voir ce qui encombre le disque, et s'en débarrasser sans risque.** Application Windows
 (Python, PySide6) d'analyse et de nettoyage de disque.
 
+- **Simple** : l'accueil liste les disques du PC — un clic pour analyser, un clic pour
+  **nettoyer automatiquement** ce qui est recréé sans contrepartie. Les outils détaillés
+  (doublons, statistiques, historique…) sont dans *Affichage › Mode avancé*.
 - **Accueil : treemap « peut-on supprimer ? »** — chaque dossier et fichier est classé
   *Système* (bloqué), *Logiciel* (déconseillé), *Vos fichiers* ou *Nettoyable*, avec la raison.
   Arborescence triée par taille, navigation au double-clic.
@@ -22,9 +25,10 @@
 
 ## Aperçu
 
-**Accueil** — le disque en un coup d'œil, coloré selon ce que vous pouvez supprimer sans
-risque : rouge *Système* (bloqué), orange *Logiciel* (déconseillé), vert *Vos fichiers*,
-bleu *Nettoyable*. Le panneau de droite explique l'élément sélectionné.
+**Accueil** — les disques du PC, puis le disque choisi en un coup d'œil (y compris l'espace
+libre), coloré selon ce que vous pouvez supprimer sans risque : rouge *Système* (bloqué), orange
+*Logiciel* (déconseillé), vert *Vos fichiers*, bleu *Nettoyable*. Le panneau de droite explique
+l'élément sélectionné ; *Nettoyer automatiquement* fait le ménage sans risque en un clic.
 
 ![Accueil : treemap coloré par niveau de sécurité et panneau de détail](docs/screenshots/accueil.png)
 

@@ -165,7 +165,7 @@ def test_home_and_cleanup_views(qapp, root, write, db, scan, monkeypatch):
         s = summarize(cache.conn, r.scan_id, str(root), clf)
         home.set_summary(str(root), r.total_size, s)
         assert s.totals[CLEANABLE] == 200
-        assert "sans aucun risque" in home.headline.text()
+        assert "recréés automatiquement" in home.headline.text()
         home.chips[CLEANABLE].click()
         assert home.details.items.count() == 1
         home._reveal(str(root / "a" / "__pycache__"))

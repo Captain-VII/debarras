@@ -5,16 +5,18 @@ import os
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QSplitter, QVBoxLayout,
-    QWidget,
+    QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QProgressBar, QPushButton, QScrollArea,
+    QSplitter, QVBoxLayout, QWidget,
 )
 
 from core import safety
 from core.actions import TRASH
+from core.cache import ScanInfo
+from core.drives import Drive
 from core.history import HistoryDiff, display_name
 from core.safety import SafetySummary
 from ui.tree_view import show_in_explorer
-from ui.treemap import GROWTH, TreemapView
+from ui.treemap import GROWTH, SPECIAL_TEXT, TreemapView
 from utils.format import human_date, human_size
 
 PATH_ROLE = Qt.ItemDataRole.UserRole + 1
@@ -85,6 +87,75 @@ class LevelChip(QPushButton):
             f"QPushButton {{ text-align: left; padding: 6px 12px; border: 1px solid palette(mid);"
             f" border-left: 6px solid {color}; border-radius: 4px; font-weight: bold; }}"
             f"QPushButton:checked {{ background: palette(midlight); }}")
+
+
+class DriveCard(QFrame):
+    """Un disque : nom, remplissage, dernière analyse, bouton Analyser / Afficher."""
+
+    def __init__(self, drive: Drive, scan: ScanInfo | None, current: bool, panel: "DrivesPanel") -> None:
+        super().__init__()
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.setMinimumWidth(230)
+        if current:
+            self.setStyleSheet("DriveCard { border: 2px solid palette(highlight); border-radius: 4px; }")
+        title = QLabel(f"<b>{drive.title}</b>")
+        bar = QProgressBar()
+        bar.setRange(0, 1000)
+        bar.setValue(int(1000 * drive.used / drive.total) if drive.total else 0)
+        bar.setTextVisible(False)
+        bar.setMaximumHeight(10)
+        info = QLabel(f"{human_size(drive.free)} libres sur {human_size(drive.total)}")
+        state = QLabel(f"Analysé le {human_date(scan.finished)}" if scan else "Jamais analysé")
+        state.setStyleSheet("color: palette(placeholder-text);")
+        row = QHBoxLayout()
+        if scan:
+            show = QPushButton("Afficher")
+            show.clicked.connect(lambda: panel.open_drive.emit(drive.root))
+            again = QPushButton("Réanalyser")
+            again.clicked.connect(lambda: panel.scan_drive.emit(drive.root))
+            row.addWidget(show)
+            row.addWidget(again)
+        else:
+            go = QPushButton("Analyser")
+            go.clicked.connect(lambda: panel.scan_drive.emit(drive.root))
+            row.addWidget(go)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 6, 10, 6)
+        layout.setSpacing(3)
+        for w in (title, bar, info, state):
+            layout.addWidget(w)
+        layout.addLayout(row)
+
+
+class DrivesPanel(QScrollArea):
+    """Tous les disques du PC, pour choisir quoi analyser sans connaître les chemins."""
+
+    open_drive = Signal(str)
+    scan_drive = Signal(str)
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setFixedHeight(128)
+        self._inner = QWidget()
+        self._row = QHBoxLayout(self._inner)
+        self._row.setContentsMargins(0, 0, 0, 0)
+        self.setWidget(self._inner)
+
+    def refresh(self, drives: list[Drive], scans: dict[str, ScanInfo], current: str) -> None:
+        while self._row.count():
+            w = self._row.takeAt(0).widget()
+            if w:
+                w.hide()
+                w.deleteLater()
+        cur = os.path.normcase(current)
+        for d in drives:
+            self._row.addWidget(DriveCard(d, scans.get(os.path.normcase(d.root)), os.path.normcase(d.root) == cur, self))
+        if not drives:
+            self._row.addWidget(QLabel("Aucun disque détecté."))
+        self._row.addStretch(1)
 
 
 class DetailsPanel(QWidget):
@@ -194,6 +265,16 @@ class DetailsPanel(QWidget):
                                "Mettre à la corbeille… ⚠" if v.level == safety.SOFTWARE else
                                "Mettre à la corbeille…")
 
+    def show_special(self, kind: str, size: int) -> None:
+        """Blocs « espace libre » et « non analysé » d'un disque entier."""
+        self._path = ""
+        self.title.setText(f"<b>{'Espace libre' if kind.endswith('free') else 'Non analysé'}</b>")
+        self.badge.hide()
+        self.body.setText(f"<b>{human_size(size)}</b><br><br>{SPECIAL_TEXT[kind]}")
+        self.items.hide()
+        self.buttons.hide()
+        self.stretch.show()
+
     def show_level(self, level: str, summary: SafetySummary | None) -> None:
         self._path = ""
         self.title.setText(f"<b>Les plus gros éléments — {safety.LABELS[level]}</b>")
@@ -217,6 +298,8 @@ class HomeView(QWidget):
 
     open_cleanup = Signal()
     open_history = Signal()
+    auto_clean = Signal()
+    relaunch_admin = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -225,6 +308,9 @@ class HomeView(QWidget):
         self.summary: SafetySummary | None = None
         self._base_headline = ""
         self._growth_text = ""
+        self._extra_text = ""     # disque entier, dossiers inaccessibles
+        self.drives = DrivesPanel()
+        self.open_drive, self.scan_drive = self.drives.open_drive, self.drives.scan_drive
         self.action_requested = self.treemap.action_requested
         self.details.action_requested.connect(self.treemap.action_requested.emit)
         self.details.reveal.connect(self._reveal)
@@ -234,19 +320,30 @@ class HomeView(QWidget):
         self.chips = {lv: LevelChip(lv) for lv in (safety.CLEANABLE, safety.PERSONAL, safety.SOFTWARE, safety.SYSTEM)}
         for chip in self.chips.values():
             chip.clicked.connect(lambda _=False, c=chip: self._on_chip(c))
-        self.headline = QLabel("Choisissez un dossier puis lancez le scan.")
+        self.headline = QLabel("Choisissez un disque à analyser ci-dessus.")
         self.headline.setWordWrap(True)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
         self.headline.linkActivated.connect(self._on_link)
-        cleanup_btn = QPushButton("🧹 Nettoyage guidé…")
-        cleanup_btn.setToolTip("Caches des navigateurs, fichiers temporaires, Windows Update…")
+        cleanup_btn = QPushButton("Choisir quoi nettoyer…")
+        cleanup_btn.setToolTip("Caches des navigateurs, fichiers temporaires, cache graphique, Windows Update…")
         cleanup_btn.clicked.connect(self.open_cleanup.emit)
+        self.auto_btn = QPushButton("🧹 Nettoyer automatiquement")
+        self.auto_btn.setToolTip(
+            "Met à la corbeille, en un clic, ce qui est recréé automatiquement : fichiers temporaires, "
+            "caches des navigateurs fermés, rapports d'erreurs.\nUn récapitulatif s'affiche avant ; "
+            "tout reste récupérable dans la corbeille.")
+        self.auto_btn.setStyleSheet("QPushButton { font-weight: bold; padding: 8px 16px; }")
+        self.auto_btn.setEnabled(False)
+        self.auto_btn.clicked.connect(self.auto_clean.emit)
 
         chips = QHBoxLayout()
         for chip in self.chips.values():
             chips.addWidget(chip)
         chips.addStretch(1)
-        chips.addWidget(cleanup_btn)
+        side = QVBoxLayout()
+        side.addWidget(self.auto_btn)
+        side.addWidget(cleanup_btn)
+        chips.addLayout(side)
         banner = QFrame()
         banner.setFrameShape(QFrame.Shape.StyledPanel)
         bl = QVBoxLayout(banner)
@@ -261,6 +358,7 @@ class HomeView(QWidget):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 4, 0, 0)
+        layout.addWidget(self.drives)
         layout.addWidget(banner)
         layout.addWidget(split, 1)
 
@@ -272,8 +370,8 @@ class HomeView(QWidget):
         for chip in self.chips.values():
             chip.set_size(None)
             chip.setChecked(False)
-        self._base_headline = self._growth_text = ""
-        self.headline.setText("Aucun scan pour ce dossier : lancez le scan.")
+        self._base_headline = self._growth_text = self._extra_text = ""
+        self.headline.setText("Choisissez un disque à analyser ci-dessus.")
         self.details.set_growth({}, 0)
         self.details.show_welcome()
 
@@ -283,7 +381,7 @@ class HomeView(QWidget):
             chip.setChecked(False)
         self.details.show_welcome()
         self._base_headline = f"<b>{human_size(total)}</b> analysés dans {root} — classement en cours…"
-        self.headline.setText(self._base_headline + self._growth_text)
+        self._update_headline()
 
     def set_summary(self, root: str, total: int, summary: SafetySummary) -> None:
         self.summary = summary
@@ -291,11 +389,11 @@ class HomeView(QWidget):
             chip.set_size(summary.totals.get(lv, 0))
         clean = summary.totals.get(safety.CLEANABLE, 0)
         text = (f"<b>{human_size(total)}</b> analysés dans {root}. "
-                f"<b>{human_size(clean)}</b> peuvent être supprimés sans aucun risque"
+                f"<b>{human_size(clean)}</b> de caches et fichiers temporaires, recréés automatiquement"
                 f" (<a href='cleanable'>voir</a>)." if clean else
                 f"<b>{human_size(total)}</b> analysés dans {root}.")
         self._base_headline = text
-        self.headline.setText(text + self._growth_text)
+        self._update_headline()
 
     def set_growth(self, diff: HistoryDiff | None) -> None:
         """Résumé de ce qui a changé depuis le scan précédent (même dossier)."""
@@ -314,8 +412,33 @@ class HomeView(QWidget):
                 f"<br>Depuis le scan du {human_date(since)} : <b>{_signed(diff.total_delta)}</b>"
                 + (f" — surtout {detail}" if detail and diff.total_delta > 0 else "")
                 + " (<a href='growth'>voir sur la carte</a> · <a href='history'>détail</a>)")
+        self._update_headline()
+
+    def set_context(self, drive: Drive | None, errors: int, admin: bool) -> None:
+        """Disque entier (taille réelle) et dossiers inaccessibles (proposer les droits admin)."""
+        parts = []
+        if drive:
+            parts.append(f"Disque de {human_size(drive.total)} : {human_size(drive.used)} utilisés, "
+                         f"{human_size(drive.free)} libres.")
+        if errors and not admin:
+            parts.append(f"⚠ {errors} dossier(s) inaccessible(s) sans droits administrateur — "
+                         "<a href='admin'>analyser en administrateur</a>.")
+        self._extra_text = (" " + " ".join(parts)) if parts else ""
+        self._update_headline()
+
+    def set_auto_clean(self, size: int | None) -> None:
+        """Taille de ce que « Nettoyer automatiquement » mettrait à la corbeille (None : calcul)."""
+        if size is None:
+            self.auto_btn.setText("🧹 Nettoyer automatiquement (calcul…)")
+            self.auto_btn.setEnabled(False)
+        else:
+            self.auto_btn.setText(f"🧹 Nettoyer automatiquement ({human_size(size)})" if size
+                                  else "🧹 Rien à nettoyer automatiquement")
+            self.auto_btn.setEnabled(size > 0)
+
+    def _update_headline(self) -> None:
         if self._base_headline:
-            self.headline.setText(self._base_headline + self._growth_text)
+            self.headline.setText(self._base_headline + self._extra_text + self._growth_text)
 
     def refresh_theme(self) -> None:
         self.treemap.refresh_theme()
@@ -329,7 +452,9 @@ class HomeView(QWidget):
     def _on_selected(self, path: str, size: int) -> None:
         for chip in self.chips.values():
             chip.setChecked(False)
-        if path:
+        if path.startswith("::"):
+            self.details.show_special(path, size)
+        elif path:
             self.details.show_path(path, size)
 
     def _on_chip(self, chip: LevelChip) -> None:
@@ -348,6 +473,8 @@ class HomeView(QWidget):
             self.treemap.set_mode(GROWTH)
         elif link == "history":
             self.open_history.emit()
+        elif link == "admin":
+            self.relaunch_admin.emit()
 
     def _reveal(self, path: str) -> None:
         """Situe un élément dans le treemap (sélectionné dans son dossier parent) et le détaille."""

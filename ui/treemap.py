@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import (
-    QColor, QFontMetrics, QGuiApplication, QKeyEvent, QLinearGradient, QMouseEvent,
+    QBrush, QColor, QFontMetrics, QGuiApplication, QKeyEvent, QLinearGradient, QMouseEvent,
     QPainter, QPaintEvent, QPen, QPixmap, QResizeEvent,
 )
 from PySide6.QtWidgets import (
@@ -93,6 +93,15 @@ class Entry:
     is_dir: bool
     count: int = 0
     mtime: float = 0.0
+    special: str = ""     # FREE / UNSCANNED : blocs ajoutés pour un disque entier
+
+
+FREE, UNSCANNED = "::free", "::unscanned"
+SPECIAL_TEXT = {
+    FREE: "Espace libre sur le disque.",
+    UNSCANNED: "Non analysé : dossier Windows, fichiers système (fichier d'échange, points de "
+               "restauration, index du disque) et dossiers inaccessibles sans droits administrateur.",
+}
 
 
 @dataclass(slots=True)
@@ -127,12 +136,14 @@ class TreemapCanvas(QWidget):
         self.mode = SAFETY
         self.growth: dict[str, int] = {}     # chemin normalisé -> variation (octets) depuis le scan précédent
         self.since = 0.0                     # date du scan précédent (fichiers plus récents = nouveaux)
+        self.extras: list[Entry] = []        # blocs « espace libre / non analysé » à la racine
 
     # --- API ------------------------------------------------------------------------
 
     def load(self, cache: Cache, scan_id: int, root: str) -> None:
         self._cache, self._scan_id, self._root = cache, scan_id, root
         self._children.clear()
+        self.extras = []
         self._selected = None
         self.navigate(root)
 
@@ -141,7 +152,16 @@ class TreemapCanvas(QWidget):
         self._items, self._pixmap, self._hover = [], None, None
         self.current = ""
         self.growth, self.since = {}, 0.0
+        self.extras = []
         self.update()
+
+    def set_extras(self, free: int, unscanned: int) -> None:
+        """Disque entier : la carte montre aussi l'espace libre et ce qui n'a pas été analysé,
+        pour que le total corresponde à la taille du disque."""
+        self.extras = [Entry(path, label, size, False, special=path) for path, label, size in (
+            (UNSCANNED, "Non analysé (Windows, système)", unscanned), (FREE, "Espace libre", free)) if size > 0]
+        self._children.pop(self._root, None)
+        self._invalidate()
 
     def set_mode(self, mode: str) -> None:
         self.mode = mode
@@ -187,6 +207,8 @@ class TreemapCanvas(QWidget):
                     for p, s, c in self._cache.child_dirs(self._scan_id, path) if s > 0]
             kids += [Entry(p, name, s, False, 0, m)
                      for p, name, s, m in self._cache.child_files(path) if s > 0]
+            if os.path.normcase(path) == os.path.normcase(self._root):
+                kids += self.extras
             kids.sort(key=lambda e: e.size, reverse=True)
             self._children[path] = kids
         return self._children.get(path, [])
@@ -243,6 +265,8 @@ class TreemapCanvas(QWidget):
     def _fill_color(self, e: Entry, dark: bool, colors: dict[str, QColor],
                     levels: dict[str, QColor], growth: dict[str, QColor]) -> QColor:
         """Couleur d'un fichier ou d'un dossier non détaillé, selon le mode."""
+        if e.special:
+            return QColor("#2b2b29" if dark else "#f1f0ec") if e.special == FREE else QColor("#5c5b57")
         if self.mode == SAFETY:
             return levels[self.verdict(e).level]
         if self.mode == GROWTH:
@@ -303,6 +327,10 @@ class TreemapCanvas(QWidget):
                 elif self.mode == GROWTH and self.growth.get(os.path.normcase(e.path), 0):
                     bg = self._tint(bg, growth["up" if self.growth[os.path.normcase(e.path)] > 0 else "down"], 0.15)
                 p.fillRect(r, bg)
+            elif e.special:  # espace libre : uni ; non analysé : hachuré
+                p.fillRect(r, self._fill_color(e, dark, colors, levels, growth))
+                if e.special == UNSCANNED:
+                    p.fillRect(r, QBrush(QColor(255, 255, 255, 40), Qt.BrushStyle.BDiagPattern))
             else:
                 base = self._fill_color(e, dark, colors, levels, growth)
                 g = QLinearGradient(r.topLeft(), r.bottomRight())
@@ -381,6 +409,8 @@ class TreemapCanvas(QWidget):
         e = it.entry
         if e is None:
             return it.label
+        if e.special:
+            return f"{e.name} — {human_size(e.size)}\n{SPECIAL_TEXT[e.special]}"
         if e.is_dir:
             text = f"{e.path}\n{human_size(e.size)} — {human_count(e.count)} fichiers"
         else:
@@ -426,7 +456,7 @@ class TreemapCanvas(QWidget):
     def contextMenuEvent(self, event) -> None:
         it = self.item_at(QPointF(event.pos()))
         menu = QMenu(self)
-        if it and it.entry:
+        if it and it.entry and not it.entry.special:
             e = it.entry
             if e.is_dir:
                 menu.addAction("Zoomer ici", lambda: self.navigate(e.path))

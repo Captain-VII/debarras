@@ -25,6 +25,14 @@ def _norm(path: str) -> str:
 
 
 def default_excluded_paths() -> list[str]:
+    """Seul le dossier Windows est exclu : ses fichiers y figurent plusieurs fois (liens durs
+    de WinSxS), le parcourir fausserait les tailles. Il apparaît comme « non analysé ».
+    Le reste (programmes, AppData) est analysé ; la sécurité vient du classement."""
+    return [os.environ.get("SystemRoot", r"C:\Windows")]
+
+
+def old_default_excluded_paths() -> list[str]:
+    """Exclusions par défaut jusqu'à la 1.5 (migration des paramètres)."""
     env = os.environ
     return [
         env.get("SystemRoot", r"C:\Windows"),
@@ -36,7 +44,7 @@ def default_excluded_paths() -> list[str]:
 @dataclass
 class ScanOptions:
     excluded_paths: list[str] = field(default_factory=default_excluded_paths)
-    excluded_names: list[str] = field(default_factory=lambda: ["AppData"])  # n'importe où
+    excluded_names: list[str] = field(default_factory=list)  # n'importe où (ex. « node_modules »)
     ignore_patterns: list[str] = field(default_factory=list)  # liste noire : motifs sur le nom (*.log…)
 
 

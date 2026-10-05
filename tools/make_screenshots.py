@@ -124,6 +124,19 @@ def main(drive: str) -> None:
     app = QApplication([])
     app.setApplicationVersion(__version__)
 
+    # Disques affichés : fictifs (le disque de démo et un second), jamais ceux du PC.
+    import ui.main_window as mw
+    from core.drives import Drive
+    def demo_drive() -> Drive:  # recalculé à chaque appel : le disque de démo grossit entre deux scans
+        used = sum(f.stat().st_size for f in DEMO.rglob("*") if f.is_file())
+        return Drive(drive + "\\", "Données", "Disque local", 512 * GB, 512 * GB - used - 41 * GB)
+
+    system = Drive("C:\\", "Windows", "Disque local", 256 * GB, 88 * GB)
+    mw.list_drives = lambda: [system, demo_drive()]
+    mw.drive_of = lambda path: (demo_drive() if os.path.normcase(path.rstrip("\\")) == os.path.normcase(drive)
+                                else None)
+    mw.is_admin = lambda: True
+
     def pump(sec: float) -> None:
         end = time.time() + sec
         while time.time() < end:

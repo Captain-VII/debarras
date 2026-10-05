@@ -1,5 +1,24 @@
 # Journal des versions
 
+## 1.6.0 — 2026-10-05
+
+Plus simple, plus complet, d'après vos retours.
+
+- **Mode simple par défaut** : l'accueil montre tous les disques du PC (place libre, dernière
+  analyse) avec un bouton *Analyser* ; seuls les onglets Accueil et Nettoyage restent visibles.
+  Tous les onglets et le choix libre d'un dossier : *Affichage › Mode avancé*.
+- **Nettoyer automatiquement** : un bouton met à la corbeille, après un seul récapitulatif, ce
+  qui est recréé sans contrepartie (fichiers temporaires, caches des navigateurs fermés,
+  rapports d'erreurs). Jamais le cache graphique ni un navigateur ouvert.
+- **Disques entiers** : Program Files et AppData sont désormais analysés (seul le dossier
+  Windows reste à part) ; la carte d'un disque montre aussi l'*espace libre* et le *non
+  analysé*, pour que le total corresponde à la taille réelle du disque. Les paramètres
+  d'exclusion par défaut des versions précédentes sont mis à jour automatiquement.
+- **Dossiers inaccessibles** : lien *Analyser en administrateur* pour relancer Débarras avec
+  les droits nécessaires (les dossiers système restent protégés).
+- Après la mise à jour, la première comparaison avec le scan précédent compte comme « nouveaux »
+  les dossiers jusque-là exclus (Program Files, AppData) : relancez l'analyse une fois.
+
 ## 1.5.4 — 2026-10-04
 
 - Résumé « Depuis le scan précédent » : hors bibliothèque de jeux, chaque hausse est nommée

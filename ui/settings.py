@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.cache import default_db_path
-from core.scanner import ScanOptions, default_excluded_paths
+from core.scanner import ScanOptions, default_excluded_paths, old_default_excluded_paths
 
 THEMES = {"system": "Système", "light": "Clair", "dark": "Sombre"}
 
@@ -21,13 +21,15 @@ THEMES = {"system": "Système", "light": "Clair", "dark": "Sombre"}
 @dataclass
 class Settings:
     excluded_paths: list[str] = field(default_factory=default_excluded_paths)
-    excluded_names: list[str] = field(default_factory=lambda: ["AppData"])
+    excluded_names: list[str] = field(default_factory=list)
     blacklist: list[str] = field(default_factory=list)   # ignorés au scan (motifs sur le nom)
     whitelist: list[str] = field(default_factory=list)   # protégés : jamais traités par les actions
     theme: str = "system"
     check_updates: bool = True        # vérifier les nouvelles versions au démarrage (1×/jour)
     last_update_check: float = 0.0
     skipped_version: str = ""         # version que l'utilisateur a choisi d'ignorer
+    advanced: bool = False            # mode avancé : tous les onglets et le choix libre du dossier
+    version: int = 2                  # format des paramètres (2 : exclusions allégées, 1.6)
 
     @staticmethod
     def path() -> Path:
@@ -38,9 +40,23 @@ class Settings:
         try:
             data = json.loads(cls.path().read_text(encoding="utf-8"))
             known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+            if data.get("version", 1) < 2:
+                known = cls._migrate_v1(known)
             return cls(**known)
         except (OSError, ValueError, TypeError):
             return cls()
+
+    @staticmethod
+    def _migrate_v1(known: dict) -> dict:
+        """1.5 -> 1.6 : les anciennes exclusions par défaut (Program Files, AppData) masquaient
+        une partie du disque. Retirées si l'utilisateur ne les avait pas modifiées."""
+        known = dict(known, version=2)
+        norm = lambda paths: sorted(os.path.normcase(p) for p in paths)  # noqa: E731
+        if norm(known.get("excluded_paths", [])) == norm(old_default_excluded_paths()):
+            known["excluded_paths"] = default_excluded_paths()
+        if known.get("excluded_names") == ["AppData"]:
+            known["excluded_names"] = []
+        return known
 
     def save(self) -> None:
         tmp = self.path().with_suffix(".tmp")
@@ -83,7 +99,7 @@ class SettingsDialog(QDialog):
         prow.addWidget(self.paths, 1)
         prow.addLayout(btns)
         self.names = QLineEdit()
-        self.names.setPlaceholderText("AppData, .git, …")
+        self.names.setPlaceholderText("node_modules, .git, …")
         excl = QGroupBox("Exclusions du scan")
         el = QVBoxLayout(excl)
         el.addWidget(QLabel("Dossiers exclus :"))
@@ -144,7 +160,7 @@ class SettingsDialog(QDialog):
         self._fill(settings)
 
     def _fill(self, s: Settings) -> None:
-        self._state = (s.last_update_check, s.skipped_version)  # non éditables, conservés
+        self._state = (s.last_update_check, s.skipped_version, s.advanced)  # non éditables, conservés
         self.updates.setChecked(s.check_updates)
         self.paths.clear()
         self.paths.addItems(s.excluded_paths)
@@ -173,4 +189,5 @@ class SettingsDialog(QDialog):
             check_updates=self.updates.isChecked(),
             last_update_check=self._state[0],
             skipped_version=self._state[1],
+            advanced=self._state[2],
         )

@@ -270,6 +270,19 @@ def open_recycle_bin() -> None:
     subprocess.Popen(["explorer.exe", "shell:RecycleBinFolder"])
 
 
+def auto_selection(targets: list[Target]) -> tuple[list[str], dict[str, int]]:
+    """Ce que « Nettoyer automatiquement » prend : catégories sans contrepartie, cochées par
+    défaut (temporaires, caches des navigateurs fermés, rapports d'erreurs). Jamais le cache
+    graphique (jeux plus lents ensuite) ni un navigateur ouvert."""
+    paths: list[str] = []
+    sizes: dict[str, int] = {}
+    for t in targets:
+        if t.kind == TRASH_KIND and t.recommended:
+            paths += t.paths
+            sizes.update(t.sizes)
+    return paths, sizes
+
+
 def analyze(cancelled: Callable[[], bool] = lambda: False) -> list[Target]:
     targets = [temp_target(cancelled), *browser_targets(cancelled), reports_target(cancelled),
                shaders_target(cancelled)]

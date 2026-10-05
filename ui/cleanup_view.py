@@ -19,6 +19,7 @@ MAX_CHILDREN = 300
 
 class CleanupView(QWidget):
     cleanup_requested = Signal(list, dict)   # chemins, tailles
+    targets_ready = Signal(list)             # résultat de chaque analyse (list[Target])
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -123,6 +124,7 @@ class CleanupView(QWidget):
             top.setExpanded(t.kind != TRASH_KIND or bool(t.note))
         self._updating = False
         self._update_total()
+        self.targets_ready.emit(targets)
 
     # --- sélection -----------------------------------------------------------------------
 
