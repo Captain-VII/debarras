@@ -1,10 +1,11 @@
 """Fixtures communes : Qt hors écran, dossier de données isolé, arborescences de test."""
 from __future__ import annotations
 
+import gc
 import os
 import time
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterator
 
 import pytest
 
@@ -18,8 +19,17 @@ from core.scanner import ScanOptions, Scanner, ScanResult  # noqa: E402
 
 
 @pytest.fixture(scope="session")
-def qapp() -> QApplication:
-    return QApplication.instance() or QApplication([])
+def qapp() -> Iterator[QApplication]:
+    app = QApplication.instance() or QApplication([])
+    yield app
+    # Détruit les widgets des tests tant que Qt est vivant : sinon Python les libère pendant
+    # sa fermeture, après QApplication, et plante par intermittence (access violation).
+    app.closeAllWindows()
+    for w in app.topLevelWidgets():
+        w.deleteLater()
+    app.processEvents()
+    gc.collect()
+    app.processEvents()
 
 
 @pytest.fixture(autouse=True)
