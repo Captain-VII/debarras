@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 1.6.2 — 2026-10-25
+
+- **Fichiers temporaires reconnus sur tous les comptes** : quand Windows note le dossier
+  temporaire sous sa forme abrégée (`C:\Users\JEAN-P~1\…`, fréquent si le nom du compte est
+  long ou contient des espaces), il n'était pas classé *Nettoyable* et la sélection automatique
+  des doublons, images similaires et fichiers de même nom ne cochait rien. C'est corrigé.
+
 ## 1.6.1 — 2026-10-05
 
 - **Mises à jour vraiment automatiques** : vérification à chaque démarrage puis toutes les
