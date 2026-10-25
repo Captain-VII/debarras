@@ -12,6 +12,7 @@ programme installé, tout ce qu'il contient en fait partie.
 """
 from __future__ import annotations
 
+import ctypes
 import os
 import sqlite3
 from dataclasses import dataclass
@@ -92,6 +93,23 @@ def _n(path: str | Path) -> str:
     return os.path.normcase(os.path.normpath(str(path))).rstrip("\\")
 
 
+def _long(path: str | Path) -> str:
+    r"""Nom long d'un chemin (`C:\Users\RUNNER~1` → `C:\Users\runneradmin`), sans suivre les liens.
+
+    Les variables d'environnement peuvent contenir des noms courts 8.3, alors que le scan
+    produit des noms longs : sans cela, `TEMP` ou `LOCALAPPDATA` ne seraient jamais reconnus.
+    """
+    if os.name != "nt":
+        return str(path)
+    buf = ctypes.create_unicode_buffer(32768)
+    n = ctypes.windll.kernel32.GetLongPathNameW(str(path), buf, len(buf))
+    return buf.value if 0 < n < len(buf) else str(path)
+
+
+def _root(path: str | Path) -> str:
+    return _n(_long(path))
+
+
 def _under(p: str, root: str) -> bool:
     return bool(root) and (p == root or p.startswith(root + "\\"))
 
@@ -103,21 +121,21 @@ class Classifier:
                  containers: set[str] | None = None) -> None:
         env = os.environ
         home = Path.home()
-        self.system_roots = [(_n(x), x) for x in (
+        self.system_roots = [(_root(x), x) for x in (
             env.get("SystemRoot", r"C:\Windows"), env.get("ProgramData", r"C:\ProgramData")) if x]
         # Program Files : logiciels installés (orange), sauf leur racine et les composants de Windows.
-        self.program_roots = [(_n(x), x) for x in dict.fromkeys(
+        self.program_roots = [(_root(x), x) for x in dict.fromkeys(
             env.get(k, d) for k, d in (("ProgramFiles", r"C:\Program Files"),
                                         ("ProgramFiles(x86)", r"C:\Program Files (x86)"),
                                         ("ProgramW6432", r"C:\Program Files"))) if x]
-        self.home = _n(home)
-        self.users = _n(home.parent)
+        self.home = _root(home)
+        self.users = _root(home.parent)
         local = env.get("LOCALAPPDATA") or str(home / "AppData" / "Local")
-        self.appdata = _n(Path(local).parent) if Path(local).name.lower() == "local" else _n(home / "AppData")
-        self.local = _n(local)
-        self.temp = _n(env.get("TEMP") or Path(local) / "Temp")
-        self.downloads = _n(home / "Downloads")
-        self.local_programs = _n(Path(local) / "Programs")
+        self.appdata = _root(Path(local).parent) if Path(local).name.lower() == "local" else _root(home / "AppData")
+        self.local = _root(local)
+        self.temp = _root(env.get("TEMP") or Path(local) / "Temp")
+        self.downloads = _root(home / "Downloads")
+        self.local_programs = _root(Path(local) / "Programs")
         self.app_dir = _n(app_dir) if app_dir else ""
         self.software_dirs = {_n(d): d for d in software_dirs or ()}  # normalisé -> tel quel
         self.containers = {_n(d) for d in containers or ()}  # surtout occupés par un logiciel (eux seuls)

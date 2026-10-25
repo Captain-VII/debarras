@@ -265,3 +265,19 @@ def test_growth_headline_labels():
     assert short_name(common + r"\Star Wars Outlaws", root) == "Star Wars Outlaws"
     assert short_name(root + "Films", root) == "Films"
     assert short_name(r"C:\Users\moi\projet\dist", "C:\\") == "projet › dist"   # pas « Users › dist »
+
+
+def test_short_8dot3_env_paths_are_recognized(tmp_path, monkeypatch):
+    r"""TEMP en nom court 8.3 (cas des runners GitHub : C:\Users\RUNNER~1) : reconnu quand même."""
+    import ctypes
+
+    long_dir = tmp_path / "dossier temporaire au nom long"
+    long_dir.mkdir()
+    buf = ctypes.create_unicode_buffer(32768)
+    ctypes.windll.kernel32.GetShortPathNameW(str(long_dir), buf, len(buf))
+    short = buf.value
+    if not short or os.path.basename(short) == long_dir.name:
+        pytest.skip("noms courts 8.3 désactivés sur ce volume")
+    monkeypatch.setenv("TEMP", short)
+    v = Classifier().classify(str(long_dir / "x.tmp"), False)
+    assert v.level == CLEANABLE
