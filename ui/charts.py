@@ -15,15 +15,12 @@ from PySide6.QtWidgets import (
 
 from core.cache import Cache
 from core.stats import StatsResult
+from ui.common import is_dark
 from utils.filetypes import CATEGORIES, category_colors
 from utils.format import human_count, human_size
 
 TOP_FOLDERS = 15
 _FILES_LABEL = "(fichiers directs)"
-
-
-def _is_dark(w: QWidget) -> bool:
-    return w.palette().window().color().lightness() < 128
 
 
 def _style_chart(chart: QChart, dark: bool) -> None:
@@ -102,7 +99,7 @@ class ChartsView(QWidget):
         for view, title in ((self.pie_view, "Répartition par type"),
                             (self.bar_view, "Plus gros sous-dossiers")):
             chart = QChart()
-            _style_chart(chart, _is_dark(self))
+            _style_chart(chart, is_dark(self))
             chart.setTitle(title)
             _set_chart(view, chart)
         self.bar_label.clear()
@@ -123,7 +120,7 @@ class ChartsView(QWidget):
     # --- anneau par catégorie ---------------------------------------------------------
 
     def _build_pie(self, stats: StatsResult) -> None:
-        dark = _is_dark(self)
+        dark = is_dark(self)
         colors = category_colors(dark)
         surface = QColor("#1a1a19" if dark else "#fcfcfb")
         total = sum(s for s, _ in stats.by_category.values()) or 1
@@ -197,7 +194,7 @@ class ChartsView(QWidget):
             entries = entries[:TOP_FOLDERS - 1] + [(f"{len(rest)} autres", None, sum(e[2] for e in rest))]
         entries.reverse()  # la plus grosse barre en haut
 
-        dark = _is_dark(self)
+        dark = is_dark(self)
         unit, factor = _unit(max((e[2] for e in entries), default=0))
         bar_set = QBarSet("Taille")
         bar_set.setColor(QColor("#3987e5" if dark else "#2a78d6"))

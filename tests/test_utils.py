@@ -2,7 +2,7 @@ import csv
 
 from utils.export import iso, write_csv
 from utils.filetypes import CATEGORIES, OTHER, category, category_colors, extensions
-from utils.format import human_count, human_duration, human_size
+from utils.format import human_count, human_duration, human_size, signed_size
 
 
 def test_human_size():
@@ -58,3 +58,9 @@ def test_write_csv_is_excel_friendly(tmp_path):
 def test_iso():
     assert iso(None) == ""
     assert len(iso(0.0 + 86400 * 365)) == 19
+
+
+def test_signed_size():
+    assert signed_size(1536) == "+1,5 Ko"
+    assert signed_size(-3) == "−3 o"
+    assert signed_size(0) == "0 o"

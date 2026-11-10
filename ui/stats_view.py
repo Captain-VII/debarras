@@ -12,24 +12,11 @@ from PySide6.QtWidgets import (
 
 from core.stats import DEFAULT_OLD_DAYS, INSTALLER_MIN_AGE_DAYS, StatsResult
 from ui.actions_ui import add_action_entries
+from ui.common import PATH_ROLE, SORT_ROLE, SortItem
 from ui.tree_view import show_in_explorer
 from utils.filetypes import CATEGORIES, category
 from utils.export import iso
 from utils.format import human_count, human_date, human_size
-
-PATH_ROLE = Qt.ItemDataRole.UserRole + 1
-SORT_ROLE = Qt.ItemDataRole.UserRole + 2
-
-
-class SortItem(QTreeWidgetItem):
-    """Tri numérique sur SORT_ROLE quand il est défini."""
-
-    def __lt__(self, other: QTreeWidgetItem) -> bool:
-        col = self.treeWidget().sortColumn() if self.treeWidget() else 0
-        a, b = self.data(col, SORT_ROLE), other.data(col, SORT_ROLE)
-        if a is not None and b is not None:
-            return a < b
-        return self.text(col).lower() < other.text(col).lower()
 
 
 def _item(cells: list[tuple[str, Any]], path: str | None = None) -> SortItem:

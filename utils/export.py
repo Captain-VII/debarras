@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Iterable, Sequence
 
 from utils.filetypes import CATEGORIES, category_colors
-from utils.format import human_count, human_date, human_size
+from utils.format import human_count, human_date, human_size, signed_size
 
 if TYPE_CHECKING:
     from core.cache import ScanInfo
@@ -95,8 +95,7 @@ def _bar(value: int, top: int) -> str:
 
 def _signed(n: int) -> str:
     cls = "up" if n > 0 else "down" if n < 0 else ""
-    sign = "+" if n > 0 else "−" if n < 0 else ""
-    return f'<span class="{cls}">{sign}{_e(human_size(abs(n)))}</span>'
+    return f'<span class="{cls}">{_e(signed_size(n))}</span>'
 
 
 def write_html_report(path: str, d: ReportData) -> None:

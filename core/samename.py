@@ -12,10 +12,9 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Signal
-
 from core.cache import Cache, subtree
-from core.duplicates import PARTIAL_SIZE, is_cloud_only, xxh_file
+from core.duplicates import PARTIAL_SIZE, HashFinder
+from core.finder import CLOUD, fresh_stat
 from utils.filetypes import extensions
 
 PERSONAL_CATEGORIES = ("Documents", "Images", "Vidéos", "Audio", "Archives")
@@ -30,7 +29,6 @@ GENERIC_NAMES = ("desktop.ini", "thumbs.db", ".ds_store", "readme*", "license*",
                  "changelog*", "copying*", "index.*", "__init__.py", "folder.jpg", "cover.jpg",
                  "albumart*.jpg", "icon.*", "favicon.*", "logo.*", "*.lnk", "*.url")
 MAX_GROUP = 50           # au-delà : nom générique (image1.png…), écarté
-_PROGRESS_INTERVAL = 0.1
 
 
 @dataclass
@@ -101,41 +99,16 @@ def in_dev_dir(path: str, root: str) -> bool:
                for part in rel.split(os.sep))
 
 
-class SameNameFinder(QThread):
-    progress = Signal(str, "qlonglong", "qlonglong")
-    result_ready = Signal(object)   # SameNameResult
-    failed = Signal(str)
+class SameNameFinder(HashFinder):
+    """`result_ready` émet un SameNameResult."""
+
+    HASH_PHASE = "Comparaison du contenu"
 
     def __init__(self, db_path: str | Path, root: str, min_size: int = 1024,
                  personal_only: bool = True, skip_dev_dirs: bool = True, parent=None) -> None:
-        super().__init__(parent)
-        self.db_path, self.root, self.min_size = db_path, root, max(0, min_size)
+        super().__init__(db_path, root, parent)
+        self.min_size = max(0, min_size)
         self.personal_only, self.skip_dev_dirs = personal_only, skip_dev_dirs
-        self._last_emit = 0.0
-
-    def cancel(self) -> None:
-        self.requestInterruption()
-
-    def _emit(self, phase: str, done: int, total: int, force: bool = False) -> None:
-        now = time.monotonic()
-        if force or now - self._last_emit >= _PROGRESS_INTERVAL:
-            self._last_emit = now
-            self.progress.emit(phase, done, total)
-
-    def run(self) -> None:
-        try:
-            cache = Cache(self.db_path)
-        except Exception as exc:  # noqa: BLE001
-            self.failed.emit(f"Cache inaccessible : {exc!r}")
-            return
-        try:
-            self.result_ready.emit(self._find(cache))
-        except Exception as exc:  # noqa: BLE001
-            self.failed.emit(f"Erreur pendant la recherche : {exc!r}")
-        finally:
-            cache.close()
-
-    # --- algorithme -----------------------------------------------------------------
 
     def _find(self, cache: Cache) -> SameNameResult:
         t0 = time.monotonic()
@@ -190,7 +163,7 @@ class SameNameFinder(QThread):
             for c in same:
                 if self.isInterruptionRequested():
                     return self._finish(cache, res, groups, t0, cancelled=True)
-                self._emit("Comparaison du contenu", done, total)
+                self._emit(self.HASH_PHASE, done, total)
                 c.usable = self._usable(c, res)
                 if c.usable and c.partial is None:
                     c.partial = self._hash(c, PARTIAL_SIZE, res)
@@ -210,55 +183,29 @@ class SameNameFinder(QThread):
                     if c.full:
                         c.key = ("full", c.size, c.full)
             done += sum(c.size for c in same)
-        self._emit("Comparaison du contenu", total, total, force=True)
+        self._emit(self.HASH_PHASE, total, total, force=True)
         return self._finish(cache, res, groups, t0)
 
     def _usable(self, c: _Cand, res: SameNameResult) -> bool:
         """Fichier lisible sans téléchargement et inchangé depuis le scan."""
-        try:
-            st = os.stat(c.path)
-        except OSError:
-            res.skipped_changed += 1
-            return False
-        if st.st_size != c.size or abs(st.st_mtime - c.mtime) > 1e-3:
-            res.skipped_changed += 1
-            return False
-        if is_cloud_only(st):
+        st, why = fresh_stat(c.path, c.size, c.mtime)
+        if why == CLOUD:
             res.skipped_cloud += 1
-            return False
-        return True
-
-    def _hash(self, c: _Cand, limit: int | None, res: SameNameResult,
-              done: int = 0, total: int = 0) -> str | None:
-        try:
-            digest, read = xxh_file(c.path, limit, self.isInterruptionRequested,
-                                    lambda n: self._emit("Comparaison du contenu", done + n, total))
-        except OSError:
-            res.skipped_error += 1
-            return None
-        if digest:
-            res.hashed_bytes += read
-            c.dirty = True
-        return digest
+        elif why:
+            res.skipped_changed += 1
+        return st is not None
 
     def _finish(self, cache: Cache, res: SameNameResult, groups: list[list[_Cand]], t0: float,
                 cancelled: bool = False) -> SameNameResult:
-        dirty = [c for g in groups for c in g if c.dirty]
-        if dirty:  # empreintes réutilisables par la recherche de doublons
-            with cache.conn:
-                cache.conn.executemany(
-                    "UPDATE files SET partial_hash = ?, full_hash = ? "
-                    "WHERE dir_id = ? AND name = ? AND size = ? AND mtime = ?",
-                    [(c.partial, c.full, c.dir_id, c.name, c.size, c.mtime) for c in dirty])
-        res.cancelled = cancelled
+        # Empreintes réutilisables par la recherche de doublons.
+        self._save(cache, [c for g in groups for c in g if c.dirty])
         if not cancelled:
             for g in groups:
                 grp = self._labelled(g)
                 if grp.versions >= 2:
                     res.groups.append(grp)
             res.groups.sort(key=lambda g: sum(f.size for f in g.files), reverse=True)
-        res.duration = time.monotonic() - t0
-        return res
+        return self._done(res, t0, cancelled)
 
     @staticmethod
     def _labelled(cands: list[_Cand]) -> SameNameGroup:

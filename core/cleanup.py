@@ -6,7 +6,6 @@ habituelles, avec confirmation et annulation). Ce qui demande des droits adminis
 """
 from __future__ import annotations
 
-import ctypes
 import os
 import subprocess
 import time
@@ -15,6 +14,8 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QThread, Signal
+
+from core import recycle
 
 TRASH_KIND, WINDOWS_KIND, RECYCLE_KIND = "trash", "windows", "recycle"
 SPLIT_SIZE = 4 * 1024 ** 3  # au-delà, un dossier est proposé élément par élément (voir _add)
@@ -234,24 +235,8 @@ def windows_update_target(cancelled=lambda: False) -> Target:
     return t
 
 
-class _SHQUERYRBINFO(ctypes.Structure):
-    _fields_ = [("cbSize", ctypes.c_ulong), ("i64Size", ctypes.c_int64), ("i64NumItems", ctypes.c_int64)]
-
-
-def recycle_bin_size() -> tuple[int, int]:
-    """(octets, éléments) dans la corbeille, tous lecteurs."""
-    try:
-        info = _SHQUERYRBINFO()
-        info.cbSize = ctypes.sizeof(info)
-        if ctypes.windll.shell32.SHQueryRecycleBinW(None, ctypes.byref(info)) == 0:
-            return int(info.i64Size), int(info.i64NumItems)
-    except (AttributeError, OSError):
-        pass
-    return 0, 0
-
-
 def recycle_target() -> Target:
-    size, n = recycle_bin_size()
+    size, n = recycle.usage()
     t = Target("recycle", "Corbeille",
                "Tout ce que Débarras supprime y passe d'abord. Vérifiez-la, puis videz-la depuis Windows "
                "pour libérer réellement l'espace (Débarras ne la vide jamais).", kind=RECYCLE_KIND,

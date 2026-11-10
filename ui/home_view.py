@@ -15,16 +15,10 @@ from core.cache import ScanInfo
 from core.drives import Drive
 from core.history import HistoryDiff, display_name
 from core.safety import SafetySummary
+from ui.common import PATH_ROLE, is_dark
 from ui.tree_view import show_in_explorer
 from ui.treemap import GROWTH, SPECIAL_TEXT, TreemapView
-from utils.format import human_date, human_size
-
-PATH_ROLE = Qt.ItemDataRole.UserRole + 1
-
-
-def _signed(n: int) -> str:
-    return ("+" if n > 0 else "−" if n < 0 else "") + human_size(abs(n))
-
+from utils.format import human_date, human_size, signed_size
 
 _LIBRARY_DIRS = {"common", "epic games", "gog games", "xboxgames", "games", "jeux"}
 
@@ -65,10 +59,6 @@ def headline_growth(diff: HistoryDiff, n: int = 3) -> list:
     return sorted(keep, key=lambda d: d.delta, reverse=True)[:n]
 
 
-def _dark(w: QWidget) -> bool:
-    return w.palette().window().color().lightness() < 128
-
-
 class LevelChip(QPushButton):
     """Bouton de synthèse d'un niveau : pastille de couleur, libellé, taille."""
 
@@ -81,7 +71,7 @@ class LevelChip(QPushButton):
         self.set_size(None)
 
     def set_size(self, size: int | None) -> None:
-        color = safety.level_colors(_dark(self))[self.level]
+        color = safety.level_colors(is_dark(self))[self.level]
         self.setText(f"{safety.LABELS[self.level]}\n{human_size(size) if size is not None else '…'}")
         self.setStyleSheet(
             f"QPushButton {{ text-align: left; padding: 6px 12px; border: 1px solid palette(mid);"
@@ -215,7 +205,7 @@ class DetailsPanel(QWidget):
         self._since = since
 
     def _set_badge(self, level: str) -> None:
-        color = safety.level_colors(_dark(self))[level]
+        color = safety.level_colors(is_dark(self))[level]
         self.badge.setText(f"● {safety.LABELS[level]}")
         self.badge.setStyleSheet(f"color: white; background: {color}; padding: 3px 10px; "
                                  "border-radius: 9px; font-weight: bold;")
@@ -229,7 +219,7 @@ class DetailsPanel(QWidget):
             "Chaque rectangle est un dossier ou un fichier, proportionnel à sa taille. "
             "Sa couleur indique si vous pouvez le supprimer :<br><br>"
             + "<br><br>".join(
-                f"<span style='color:{safety.level_colors(_dark(self))[lv]}'>■</span> "
+                f"<span style='color:{safety.level_colors(is_dark(self))[lv]}'>■</span> "
                 f"<b>{safety.LABELS[lv]}</b> — {safety.HINTS[lv]}" for lv in safety.LEVELS)
             + "<br><br>Les éléments système ne peuvent pas être supprimés depuis Débarras, et tout ce "
               "que vous supprimez passe par la corbeille.")
@@ -250,11 +240,11 @@ class DetailsPanel(QWidget):
             inside = safety.current().risky_inside(path)
             if inside:
                 parts.append("<span style='color:%s'>⚠ <b>Contient des logiciels :</b></span><br>%s"
-                             % (safety.level_colors(_dark(self))[safety.SOFTWARE],
+                             % (safety.level_colors(is_dark(self))[safety.SOFTWARE],
                                 "<br>".join(f"• {display_name(d, path)}" for d in inside)))
         d = self._growth.get(os.path.normcase(path))
         if d:
-            parts.append(f"<b>Depuis le scan du {human_date(self._since)} :</b> {_signed(d)}")
+            parts.append(f"<b>Depuis le scan du {human_date(self._since)} :</b> {signed_size(d)}")
         self.body.setText("<br><br>".join(parts))
         self.items.hide()
         self.buttons.show()
@@ -406,10 +396,10 @@ class HomeView(QWidget):
             since = diff.old.finished or diff.old.started
             self.treemap.canvas.set_growth(deltas, since)
             self.details.set_growth(deltas, since)
-            detail = ", ".join(f"{short_name(d.path, diff.new.root)} {_signed(d.delta)}"
+            detail = ", ".join(f"{short_name(d.path, diff.new.root)} {signed_size(d.delta)}"
                                for d in headline_growth(diff))
             self._growth_text = (
-                f"<br>Depuis le scan du {human_date(since)} : <b>{_signed(diff.total_delta)}</b>"
+                f"<br>Depuis le scan du {human_date(since)} : <b>{signed_size(diff.total_delta)}</b>"
                 + (f" — surtout {detail}" if detail and diff.total_delta > 0 else "")
                 + " (<a href='growth'>voir sur la carte</a> · <a href='history'>détail</a>)")
         self._update_headline()

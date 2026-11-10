@@ -15,11 +15,11 @@ from PySide6.QtWidgets import (
 
 from core.cache import Cache, ScanInfo
 from core.history import NEW, REMOVED, DirDelta, HistoryDiff, HistoryWorker, display_name
-from ui.charts import _is_dark, _set_chart, _style_chart, _unit
+from ui.charts import _set_chart, _style_chart, _unit
+from ui.common import PATH_ROLE, SORT_ROLE, SortItem, is_dark
 from ui.tree_view import show_in_explorer
-from utils.format import human_count, human_date, human_size
+from utils.format import human_count, human_date, human_size, signed_count, signed_size
 
-PATH_ROLE = Qt.ItemDataRole.UserRole + 1
 MAX_CHILDREN = 500
 _PLACEHOLDER = "…"
 
@@ -27,14 +27,6 @@ _PLACEHOLDER = "…"
 def scan_label(s: ScanInfo) -> str:
     """Date du scan à la seconde (deux scans rapprochés restent distincts)."""
     return datetime.fromtimestamp(s.finished or s.started).strftime("%d/%m/%Y %H:%M:%S")
-
-
-def signed_size(n: int) -> str:
-    return ("+" if n > 0 else "−" if n < 0 else "") + human_size(abs(n))
-
-
-def signed_count(n: int) -> str:
-    return ("+" if n > 0 else "−" if n < 0 else "") + human_count(abs(n))
 
 
 class HistoryView(QWidget):
@@ -139,7 +131,7 @@ class HistoryView(QWidget):
         self.summary.setText("Aucun scan chargé.")
         self.delete_btn.setEnabled(False)
         chart = QChart()
-        _style_chart(chart, _is_dark(self))
+        _style_chart(chart, is_dark(self))
         chart.setTitle("Évolution de la taille")
         _set_chart(self.chart_view, chart)
 
@@ -170,7 +162,7 @@ class HistoryView(QWidget):
         self.compare()
 
     def _build_chart(self) -> None:
-        dark = _is_dark(self)
+        dark = is_dark(self)
         chart = QChart()
         _style_chart(chart, dark)
         chart.setTitle("Évolution de la taille")
@@ -273,11 +265,11 @@ class HistoryView(QWidget):
 
     def _make_item(self, d: DirDelta, full: bool = False, lazy: bool = True) -> QTreeWidgetItem:
         name = d.path if full else os.path.basename(d.path)
-        it = _DeltaItem([name, human_size(d.old_size), human_size(d.new_size), signed_size(d.delta),
+        it = SortItem([name, human_size(d.old_size), human_size(d.new_size), signed_size(d.delta),
                          signed_count(d.count_delta), d.status])
         it.setData(0, PATH_ROLE, d.path)
         for col, key in ((1, d.old_size), (2, d.new_size), (3, abs(d.delta)), (4, d.count_delta)):
-            it.setData(col, Qt.ItemDataRole.UserRole, key)
+            it.setData(col, SORT_ROLE, key)
         it.setToolTip(0, d.path)
         for col in (1, 2, 3, 4):
             it.setTextAlignment(col, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -340,15 +332,3 @@ class HistoryView(QWidget):
     def shutdown(self) -> None:
         for w in list(self._workers):
             w.wait()
-
-
-class _DeltaItem(QTreeWidgetItem):
-    """Tri numérique des colonnes chiffrées (Variation : valeur absolue)."""
-
-    def __lt__(self, other: QTreeWidgetItem) -> bool:
-        col = self.treeWidget().sortColumn() if self.treeWidget() else 0
-        a, b = self.data(col, Qt.ItemDataRole.UserRole), other.data(col, Qt.ItemDataRole.UserRole)
-        if a is not None and b is not None:
-            return a < b
-        # Pas de super().__lt__ : PySide rappellerait cette méthode en boucle.
-        return self.text(col).lower() < other.text(col).lower()

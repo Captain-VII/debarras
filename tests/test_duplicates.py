@@ -85,3 +85,15 @@ def test_cancel_returns_cancelled_result(root, write, scan, db, qapp):
     f.isInterruptionRequested = lambda: True
     f.run()
     assert out[0].cancelled and out[0].groups == []
+
+
+def test_fresh_stat(tmp_path, monkeypatch):
+    from core import finder
+    f = tmp_path / "a.bin"
+    f.write_bytes(b"x" * 10)
+    mtime = os.stat(f).st_mtime
+    assert finder.fresh_stat(str(f), 10, mtime)[0] is not None
+    assert finder.fresh_stat(str(f), 11, mtime) == (None, finder.CHANGED)
+    assert finder.fresh_stat(str(tmp_path / "absent"), 10, mtime) == (None, finder.CHANGED)
+    monkeypatch.setattr(finder, "is_cloud_only", lambda st: True)  # fichier « en ligne uniquement »
+    assert finder.fresh_stat(str(f), 10, mtime) == (None, finder.CLOUD)
