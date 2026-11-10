@@ -1,5 +1,13 @@
 # Journal des versions
 
+## 1.6.3 — 2026-11-10
+
+- **Code réorganisé, sans changement visible** : les recherches de doublons, d'images
+  similaires et de fichiers de même nom partagent désormais le même socle (lecture des
+  fichiers, progression, annulation), et plusieurs petites fonctions recopiées dans
+  l'interface n'existent plus qu'une fois. Le comportement est identique ; les prochaines
+  corrections ne seront à faire qu'à un seul endroit.
+
 ## 1.6.2 — 2026-10-25
 
 - **Fichiers temporaires reconnus sur tous les comptes** : quand Windows note le dossier
