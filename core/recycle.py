@@ -10,6 +10,8 @@ import ctypes
 import os
 from dataclasses import dataclass
 
+from utils.format import human_size as _h
+
 _BITBUCKET = r"Software\Microsoft\Windows\CurrentVersion\Explorer\BitBucket\Volume"
 
 
@@ -29,15 +31,16 @@ class _SHQUERYRBINFO(ctypes.Structure):
     _fields_ = [("cbSize", ctypes.c_ulong), ("i64Size", ctypes.c_int64), ("i64NumItems", ctypes.c_int64)]
 
 
-def _used(drive: str) -> int:
+def usage(drive: str | None = None) -> tuple[int, int]:
+    """(octets, éléments) dans la corbeille de `drive` ('C:\\'), ou de tous les lecteurs."""
     try:
         info = _SHQUERYRBINFO()
         info.cbSize = ctypes.sizeof(info)
         if ctypes.windll.shell32.SHQueryRecycleBinW(drive, ctypes.byref(info)) == 0:
-            return int(info.i64Size)
+            return int(info.i64Size), int(info.i64NumItems)
     except (AttributeError, OSError):
         pass
-    return 0
+    return 0, 0
 
 
 def _volume_guid(drive: str) -> str | None:
@@ -77,7 +80,7 @@ def bin_info(drive: str) -> BinInfo:
                             pass
         except (ImportError, OSError):
             pass
-    return BinInfo(drive, capacity, _used(drive), disabled)
+    return BinInfo(drive, capacity, usage(drive)[0], disabled)
 
 
 def capacity_problems(paths: list[str], sizes: dict[str, int],
@@ -105,8 +108,3 @@ def capacity_problems(paths: list[str], sizes: dict[str, int],
                        f"({_h(b.free)} sur {_h(b.capacity or 0)}). Windows effacerait définitivement les "
                        "éléments les plus anciens de la corbeille : videz-la d'abord.")
     return out
-
-
-def _h(n: int) -> str:
-    from utils.format import human_size
-    return human_size(n)

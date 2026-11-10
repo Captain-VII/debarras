@@ -5,20 +5,17 @@ ne relit presque rien sur le disque.
 """
 from __future__ import annotations
 
-import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import xxhash
-from PySide6.QtCore import QThread, Signal
 
 from core.cache import Cache, subtree
+from core.finder import CLOUD, Finder, fresh_stat
 
 PARTIAL_SIZE = 4096
 CHUNK = 1 << 20
-# Fichiers « en ligne uniquement » (OneDrive, Proton Drive…) : les lire les téléchargerait.
-_CLOUD_ATTRS = 0x1000 | 0x40000 | 0x400000  # OFFLINE | RECALL_ON_OPEN | RECALL_ON_DATA_ACCESS
 
 
 def xxh_file(path: str, limit: int | None = None, stop=lambda: False,
@@ -48,10 +45,35 @@ def xxh_file(path: str, limit: int | None = None, stop=lambda: False,
     return h.hexdigest(), read
 
 
-def is_cloud_only(st: os.stat_result) -> bool:
-    """Fichier « en ligne uniquement » (OneDrive, Proton Drive…) : le lire le téléchargerait."""
-    return bool(getattr(st, "st_file_attributes", 0) & _CLOUD_ATTRS)
-_PROGRESS_INTERVAL = 0.1
+class HashFinder(Finder):
+    """Recherche qui compare des contenus par empreinte xxHash, mémorisée dans le cache."""
+
+    HASH_PHASE = "Hash complet"
+
+    def _hash(self, c, limit: int | None, res, done: int = 0, total: int = 0) -> str | None:
+        """xxh3-128 des `limit` premiers octets (ou du fichier entier) ; None si illisible ou annulé."""
+        try:
+            digest, read = xxh_file(c.path, limit, self.isInterruptionRequested,
+                                    lambda n: self._emit(self.HASH_PHASE, done + n, total))
+        except OSError:
+            res.skipped_error += 1
+            return None
+        if digest:
+            res.hashed_bytes += read
+            c.dirty = True
+        return digest
+
+    @staticmethod
+    def _save(cache: Cache, cands: list) -> None:
+        """Mémorise les hash (seulement si le fichier n'a pas changé entre-temps)."""
+        if not cands:
+            return
+        with cache.conn:
+            cache.conn.executemany(
+                "UPDATE files SET partial_hash = ?, full_hash = ? "
+                "WHERE dir_id = ? AND name = ? AND size = ? AND mtime = ?",
+                [(c.partial, c.full, c.dir_id, c.name, c.size, c.mtime) for c in cands],
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,39 +123,12 @@ class _Cand:
         self.dirty = False  # hash à écrire dans le cache
 
 
-class DuplicateFinder(QThread):
-    progress = Signal(str, "qlonglong", "qlonglong")  # étape, fait, total
-    result_ready = Signal(object)                     # DupResult
-    failed = Signal(str)
+class DuplicateFinder(HashFinder):
+    """`result_ready` émet un DupResult."""
 
     def __init__(self, db_path: str | Path, root: str, min_size: int = 1, parent=None) -> None:
-        super().__init__(parent)
-        self.db_path, self.root, self.min_size = db_path, root, max(1, min_size)
-        self._last_emit = 0.0
-
-    def cancel(self) -> None:
-        self.requestInterruption()
-
-    def _emit(self, phase: str, done: int, total: int, force: bool = False) -> None:
-        now = time.monotonic()
-        if force or now - self._last_emit >= _PROGRESS_INTERVAL:
-            self._last_emit = now
-            self.progress.emit(phase, done, total)
-
-    def run(self) -> None:
-        try:
-            cache = Cache(self.db_path)
-        except Exception as exc:  # noqa: BLE001
-            self.failed.emit(f"Cache inaccessible : {exc!r}")
-            return
-        try:
-            self.result_ready.emit(self._find(cache))
-        except Exception as exc:  # noqa: BLE001
-            self.failed.emit(f"Erreur pendant la recherche : {exc!r}")
-        finally:
-            cache.close()
-
-    # --- algorithme -----------------------------------------------------------------
+        super().__init__(db_path, root, parent)
+        self.min_size = max(1, min_size)
 
     def _find(self, cache: Cache) -> DupResult:
         t0 = time.monotonic()
@@ -159,16 +154,12 @@ class DuplicateFinder(QThread):
             if self.isInterruptionRequested():
                 return self._done(res, t0, cancelled=True)
             self._emit("Vérification des fichiers", i, len(rows))
-            try:
-                st = os.stat(path)
-            except OSError:
-                res.skipped_changed += 1
-                continue
-            if st.st_size != size or abs(st.st_mtime - mtime) > 1e-3:
-                res.skipped_changed += 1
-                continue
-            if is_cloud_only(st):
-                res.skipped_cloud += 1
+            st, why = fresh_stat(path, size, mtime)
+            if st is None:
+                if why == CLOUD:
+                    res.skipped_cloud += 1
+                else:
+                    res.skipped_changed += 1
                 continue
             ident = (st.st_dev, st.st_ino)
             ids = seen_ids.setdefault(size, set())
@@ -223,36 +214,3 @@ class DuplicateFinder(QThread):
                     sub.setdefault(k, []).append(c)
             out.extend(s for s in sub.values() if len(s) > 1)
         return out
-
-    def _hash(self, c: _Cand, limit: int | None, res: DupResult,
-              done: int = 0, total: int = 0) -> str | None:
-        """xxh3-128 des `limit` premiers octets (ou du fichier entier)."""
-        try:
-            digest, read = xxh_file(c.path, limit, self.isInterruptionRequested,
-                                    lambda n: self._emit("Hash complet", done + n, total))
-        except OSError:
-            res.skipped_error += 1
-            return None
-        if digest is None:
-            return None
-        res.hashed_bytes += read
-        c.dirty = True
-        return digest
-
-    @staticmethod
-    def _save(cache: Cache, cands: list[_Cand]) -> None:
-        """Mémorise les hash (seulement si le fichier n'a pas changé entre-temps)."""
-        if not cands:
-            return
-        with cache.conn:
-            cache.conn.executemany(
-                "UPDATE files SET partial_hash = ?, full_hash = ? "
-                "WHERE dir_id = ? AND name = ? AND size = ? AND mtime = ?",
-                [(c.partial, c.full, c.dir_id, c.name, c.size, c.mtime) for c in cands],
-            )
-
-    @staticmethod
-    def _done(res: DupResult, t0: float, cancelled: bool = False) -> DupResult:
-        res.cancelled = cancelled
-        res.duration = time.monotonic() - t0
-        return res

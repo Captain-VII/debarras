@@ -16,6 +16,7 @@ from core import safety
 from core.duplicates import DupFile, DuplicateFinder
 from core.actions import ARCHIVE, MOVE, TRASH, protection
 from utils.export import iso
+from ui.common import is_dark
 from ui.tree_view import show_in_explorer
 from utils.format import human_count, human_date, human_duration, human_size
 
@@ -160,7 +161,7 @@ class DupView(QWidget):
         if v.level not in (safety.SYSTEM, safety.SOFTWARE):
             return
         child.setData(0, RISK_ROLE, v)
-        child.setForeground(0, QColor(safety.level_colors(self.palette().window().color().lightness() < 128)[v.level]))
+        child.setForeground(0, QColor(safety.level_colors(is_dark(self))[v.level]))
         child.setToolTip(0, f"{path}\n\n⚠ {v.label} : {v.reason}\n"
                             "Ne le supprimez que si vous savez ce que vous faites.")
         if v.blocked:

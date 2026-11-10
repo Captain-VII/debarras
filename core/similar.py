@@ -16,17 +16,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from PIL import Image, ImageOps
-from PySide6.QtCore import QThread, Signal
 
 from core.cache import Cache, subtree
-from core.duplicates import is_cloud_only
+from core.finder import CHANGED, CLOUD, Finder, fresh_stat
 
 IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp")
 THRESHOLDS = {"Identiques à l'œil": 0, "Très proches": 5, "Proches": 10}  # bits différents sur 64
 DEFAULT_THRESHOLD = 5
 THUMB = 96
 _MASK = (1 << 64) - 1
-_PROGRESS_INTERVAL = 0.1
 
 Image.MAX_IMAGE_PIXELS = 200_000_000  # garde-fou contre les images piégées (« bombes »)
 
@@ -200,40 +198,14 @@ class _Cand:
         self.hash = None if h is None else from_signed(h)
 
 
-class SimilarFinder(QThread):
-    progress = Signal(str, "qlonglong", "qlonglong")  # étape, fait, total
-    result_ready = Signal(object)                     # SimilarResult
-    failed = Signal(str)
+class SimilarFinder(Finder):
+    """`result_ready` émet un SimilarResult."""
 
     def __init__(self, db_path: str | Path, root: str, min_size: int = 20 * 1024,
                  threshold: int = DEFAULT_THRESHOLD, parent=None) -> None:
-        super().__init__(parent)
-        self.db_path, self.root = db_path, root
+        super().__init__(db_path, root, parent)
         self.min_size, self.threshold = max(1, min_size), threshold
         self.workers = min(8, os.cpu_count() or 4)
-        self._last_emit = 0.0
-
-    def cancel(self) -> None:
-        self.requestInterruption()
-
-    def _emit(self, phase: str, done: int, total: int, force: bool = False) -> None:
-        now = time.monotonic()
-        if force or now - self._last_emit >= _PROGRESS_INTERVAL:
-            self._last_emit = now
-            self.progress.emit(phase, done, total)
-
-    def run(self) -> None:
-        try:
-            cache = Cache(self.db_path)
-        except Exception as exc:  # noqa: BLE001
-            self.failed.emit(f"Cache inaccessible : {exc!r}")
-            return
-        try:
-            self.result_ready.emit(self._find(cache))
-        except Exception as exc:  # noqa: BLE001
-            self.failed.emit(f"Erreur pendant la recherche : {exc!r}")
-        finally:
-            cache.close()
 
     def _find(self, cache: Cache) -> SimilarResult:
         t0 = time.monotonic()
@@ -262,9 +234,9 @@ class SimilarFinder(QThread):
                     ready.append(c)
                     pending.append(c)
                     res.hashed += 1
-                elif outcome == "cloud":
+                elif outcome == CLOUD:
                     res.skipped_cloud += 1
-                elif outcome == "changed":
+                elif outcome == CHANGED:
                     res.skipped_changed += 1
                 else:
                     res.skipped_error += 1
@@ -302,14 +274,8 @@ class SimilarFinder(QThread):
 
     @staticmethod
     def _hash_one(c: _Cand) -> int | str:
-        try:
-            st = os.stat(c.path)
-        except OSError:
-            return "changed"
-        if st.st_size != c.size or abs(st.st_mtime - c.mtime) > 1e-3:
-            return "changed"
-        if is_cloud_only(st):
-            return "cloud"
+        if why := fresh_stat(c.path, c.size, c.mtime)[1]:
+            return why
         try:
             return dhash(c.path)
         except Exception:  # noqa: BLE001 - format non géré, fichier corrompu…
@@ -330,9 +296,3 @@ class SimilarFinder(QThread):
             cache.conn.executemany(
                 "UPDATE files SET image_hash = ? WHERE dir_id = ? AND name = ? AND size = ? AND mtime = ?",
                 [(to_signed(c.hash), c.dir_id, c.name, c.size, c.mtime) for c in cands])
-
-    @staticmethod
-    def _done(res: SimilarResult, t0: float, cancelled: bool = False) -> SimilarResult:
-        res.cancelled = cancelled
-        res.duration = time.monotonic() - t0
-        return res

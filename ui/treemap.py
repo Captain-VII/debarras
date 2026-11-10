@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from core import safety
 from core.cache import Cache
 from ui.actions_ui import add_action_entries
+from ui.common import is_dark
 from ui.tree_view import show_in_explorer
 from utils.filetypes import CATEGORIES, OTHER, category, category_colors
 from utils.format import human_count, human_size
@@ -259,9 +260,6 @@ class TreemapCanvas(QWidget):
 
     # --- rendu ----------------------------------------------------------------------
 
-    def _is_dark(self) -> bool:
-        return self.palette().window().color().lightness() < 128
-
     def _fill_color(self, e: Entry, dark: bool, colors: dict[str, QColor],
                     levels: dict[str, QColor], growth: dict[str, QColor]) -> QColor:
         """Couleur d'un fichier ou d'un dossier non détaillé, selon le mode."""
@@ -293,7 +291,7 @@ class TreemapCanvas(QWidget):
         dpr = self.devicePixelRatioF()
         pm = QPixmap(self.size() * dpr)
         pm.setDevicePixelRatio(dpr)
-        dark = self._is_dark()
+        dark = is_dark(self)
         surface = QColor("#1a1a19" if dark else "#fcfcfb")
         pm.fill(surface)
         colors = {k: QColor(v) for k, v in category_colors(dark).items()}
@@ -375,7 +373,7 @@ class TreemapCanvas(QWidget):
             p.setPen(QPen(self.palette().highlight().color(), 3))
             p.drawRect(sel.rect.adjusted(1, 1, -2, -2))
         if self._hover and self._hover is not sel:
-            p.setPen(QPen(QColor(255, 255, 255, 200) if self._is_dark() else QColor(0, 0, 0, 180), 2))
+            p.setPen(QPen(QColor(255, 255, 255, 200) if is_dark(self) else QColor(0, 0, 0, 180), 2))
             p.drawRect(self._hover.rect.adjusted(1, 1, -2, -2))
 
     def resizeEvent(self, event: QResizeEvent) -> None:
@@ -517,7 +515,7 @@ class TreemapView(QWidget):
             if w:
                 w.hide()  # sinon visible jusqu'à sa destruction différée
                 w.deleteLater()
-        dark = self.canvas._is_dark()
+        dark = is_dark(self.canvas)
         mode = self.canvas.mode
         if mode == SAFETY:
             colors = safety.level_colors(dark)

@@ -7,34 +7,24 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QAbstractItemView, QComboBox, QDoubleSpinBox, QGridLayout, QHeaderView, QLabel, QLineEdit,
-    QMenu, QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+    QMenu, QPushButton, QTreeWidget, QVBoxLayout, QWidget,
 )
 
 from core.cache import Cache
 from core.search import MAX_RESULTS, Hit, SearchQuery, SearchResult, SearchWorker
 from ui.actions_ui import add_action_entries
+from ui.common import PATH_ROLE, SORT_ROLE, SortItem
 from ui.tree_view import show_in_explorer
 from utils.filetypes import CATEGORIES
 from utils.export import iso
 from utils.format import human_count, human_date, human_size
 
-PATH_ROLE = Qt.ItemDataRole.UserRole + 1
-KEY_ROLE = Qt.ItemDataRole.UserRole + 2
 MB = 1024 * 1024
 
 # (libellé, modifiés depuis moins de N jours, modifiés il y a plus de N jours)
 DATE_FILTERS = [("Toutes dates", 0, 0), ("Moins de 7 jours", 7, 0), ("Moins de 30 jours", 30, 0),
                 ("Moins d'un an", 365, 0), ("Plus d'un an", 0, 365), ("Plus de 2 ans", 0, 730),
                 ("Plus de 5 ans", 0, 1825)]
-
-
-class _Item(QTreeWidgetItem):
-    def __lt__(self, other: QTreeWidgetItem) -> bool:
-        col = self.treeWidget().sortColumn() if self.treeWidget() else 0
-        a, b = self.data(col, KEY_ROLE), other.data(col, KEY_ROLE)
-        if a is not None and b is not None:
-            return a < b
-        return self.text(col).lower() < other.text(col).lower()
 
 
 class SearchView(QWidget):
@@ -178,10 +168,10 @@ class SearchView(QWidget):
         self.hits = res.hits
         items = []
         for h in res.hits:
-            it = _Item([h.name, os.path.dirname(h.path), human_size(h.size), human_date(h.mtime)])
+            it = SortItem([h.name, os.path.dirname(h.path), human_size(h.size), human_date(h.mtime)])
             it.setData(0, PATH_ROLE, h.path)
-            it.setData(2, KEY_ROLE, h.size)
-            it.setData(3, KEY_ROLE, h.mtime)
+            it.setData(2, SORT_ROLE, h.size)
+            it.setData(3, SORT_ROLE, h.mtime)
             it.setToolTip(0, h.path)
             it.setTextAlignment(2, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             items.append(it)

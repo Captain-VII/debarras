@@ -20,6 +20,8 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
+from core.cache import subtree
+
 SYSTEM, SOFTWARE, PERSONAL, CLEANABLE = "system", "software", "personal", "cleanable"
 LEVELS = (SYSTEM, SOFTWARE, PERSONAL, CLEANABLE)
 LABELS = {SYSTEM: "Système", SOFTWARE: "Logiciel", PERSONAL: "Vos fichiers", CLEANABLE: "Nettoyable"}
@@ -280,7 +282,6 @@ CONTAINER_SHARE = 0.5   # un dossier occupé à 50 % ou plus par un logiciel est
 
 def software_dirs(conn: sqlite3.Connection, root: str) -> set[str]:
     """Dossiers du scan contenant des .dll (programmes installés, portables ou jeux)."""
-    from core.cache import subtree
     cond, args = subtree("d.path", root)
     rows = conn.execute(
         f"SELECT DISTINCT d.path FROM files f JOIN dirpaths d ON d.id = f.dir_id "
@@ -365,7 +366,6 @@ def summarize(conn: sqlite3.Connection, scan_id: int, root: str, clf: Classifier
         if parent is None or clf.classify(parent, True).level != v.level:
             top[v.level].append((path, size, v.reason))
     # Installeurs de Téléchargements : comptés comme nettoyables.
-    from core.cache import subtree
     if _under(_n(root), clf.downloads) or _under(clf.downloads, _n(root)):
         cond, args = subtree("d.path", str(Path.home() / "Downloads"))
         exts = tuple(_INSTALLERS)

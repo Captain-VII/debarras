@@ -42,3 +42,16 @@ def human_duration(seconds: float) -> str:
 def human_count(n: int) -> str:
     """124190 -> '124 190' (espace insécable fine)."""
     return f"{n:,}".replace(",", " ")
+
+
+def _sign(n: float) -> str:
+    return "+" if n > 0 else "−" if n < 0 else ""
+
+
+def signed_size(n: int) -> str:
+    """Variation de taille : '+1,5 Ko', '−3 o'."""
+    return _sign(n) + human_size(abs(n))
+
+
+def signed_count(n: int) -> str:
+    return _sign(n) + human_count(abs(n))
