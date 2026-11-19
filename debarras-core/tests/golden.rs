@@ -12,6 +12,7 @@ use debarras_core::duplicates::find_duplicates;
 use debarras_core::safety::{Env, Level, analyze};
 use debarras_core::samename::find_same_names;
 use debarras_core::scanner::{ScanOptions, scan};
+use debarras_core::similar::find_similar;
 use serde_json::{Value, json};
 
 fn golden_dir() -> PathBuf {
@@ -101,6 +102,7 @@ fn core_matches_python() {
     let cache = Cache::open(&db).unwrap();
     check_duplicates(&fx, &cache);
     check_samename(&fx, &cache);
+    check_similar(&fx, &cache);
 }
 
 fn check_scan(fx: &Fixture, db: &Path) -> i64 {
@@ -291,4 +293,37 @@ fn check_samename(fx: &Fixture, cache: &Cache) {
         })).collect::<Vec<_>>(),
     });
     assert_eq!(got, golden("samename"));
+}
+
+/// Les empreintes elles-mêmes diffèrent un peu de Pillow (migration v4) : on compare les
+/// groupes, leurs fichiers dans l'ordre et leurs dimensions, pas les valeurs d'empreinte.
+fn check_similar(fx: &Fixture, cache: &Cache) {
+    let root = format!("{}\\", fx.letter);
+    let r = find_similar(
+        cache,
+        &root,
+        1,
+        5,
+        &AtomicBool::new(false),
+        &mut no_progress(),
+    )
+    .unwrap();
+    let view = |v: &Value| -> Value {
+        json!({
+            "cancelled": v["cancelled"], "candidates": v["candidates"], "hashed": v["hashed"],
+            "root": v["root"], "skipped_changed": v["skipped_changed"], "skipped_cloud": v["skipped_cloud"],
+            "skipped_error": v["skipped_error"], "threshold": v["threshold"],
+            "groups": v["groups"].as_array().unwrap().iter().map(|g| g["files"].as_array().unwrap().iter()
+                .map(|f| json!([f["path"], f["size"], f["width"], f["height"]])).collect::<Vec<_>>()).collect::<Vec<_>>(),
+        })
+    };
+    let got = json!({
+        "cancelled": r.cancelled, "candidates": r.candidates, "hashed": r.hashed, "root": fx.rel(&r.root),
+        "skipped_changed": r.skipped_changed, "skipped_cloud": r.skipped_cloud, "skipped_error": r.skipped_error,
+        "threshold": r.threshold,
+        "groups": r.groups.iter().map(|g| json!({"files": g.files.iter().map(|f| json!({
+            "path": fx.rel(&f.path), "size": f.size, "width": f.width, "height": f.height})).collect::<Vec<_>>()}))
+            .collect::<Vec<_>>(),
+    });
+    assert_eq!(view(&got), view(&golden("similar")));
 }
