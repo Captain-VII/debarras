@@ -4,3 +4,4 @@
 pub mod cache;
 pub mod filetypes;
 pub mod paths;
+pub mod scanner;
