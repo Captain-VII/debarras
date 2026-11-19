@@ -1,0 +1,40 @@
+{
+ "cancelled": false,
+ "candidates": 5,
+ "groups": [
+  {
+   "files": [
+    {
+     "distance": 0,
+     "hash": 3272586976605839827,
+     "height": 240,
+     "path": "\\Users\\Alice\\Images\\plage.jpg",
+     "size": 7672,
+     "width": 320
+    },
+    {
+     "distance": 1,
+     "hash": 3200529382567911891,
+     "height": 240,
+     "path": "\\Users\\Alice\\Images\\plage.png",
+     "size": 4716,
+     "width": 320
+    },
+    {
+     "distance": 4,
+     "hash": 3252883728236093907,
+     "height": 120,
+     "path": "\\Users\\Alice\\Images\\plage-petite.png",
+     "size": 7032,
+     "width": 160
+    }
+   ]
+  }
+ ],
+ "hashed": 5,
+ "root": "\\",
+ "skipped_changed": 0,
+ "skipped_cloud": 0,
+ "skipped_error": 0,
+ "threshold": 5
+}

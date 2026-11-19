@@ -1,0 +1,44 @@
+{
+ "cancelled": false,
+ "candidates": 43,
+ "groups": [
+  {
+   "digest": "2d7e55e345bddaeaf7f0de7f07252141",
+   "files": [
+    {
+     "path": "\\Archives\\2020\\vacances.mov",
+     "size": 50000
+    },
+    {
+     "path": "\\Users\\Alice\\Photos\\vacances.mov",
+     "size": 50000
+    },
+    {
+     "path": "\\Users\\Alice\\Sauvegarde\\vacances (copie).mov",
+     "size": 50000
+    }
+   ],
+   "size": 50000
+  },
+  {
+   "digest": "507d9578b4149bdcddd2908ddeff8064",
+   "files": [
+    {
+     "path": "\\Users\\Alice\\Documents\\contrat.pdf",
+     "size": 20000
+    },
+    {
+     "path": "\\Users\\Alice\\Sauvegarde\\contrat.pdf",
+     "size": 20000
+    }
+   ],
+   "size": 20000
+  }
+ ],
+ "hashed_bytes": 423880,
+ "min_size": 1,
+ "root": "\\",
+ "skipped_changed": 0,
+ "skipped_cloud": 0,
+ "skipped_error": 0
+}

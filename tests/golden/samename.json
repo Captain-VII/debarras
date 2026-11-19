@@ -1,0 +1,37 @@
+{
+ "cancelled": false,
+ "candidates": 8,
+ "groups": [
+  {
+   "files": [
+    {
+     "path": "\\Users\\Alice\\Documents\\rapport.docx",
+     "size": 15000,
+     "version": "A"
+    },
+    {
+     "path": "\\Archives\\rapport.docx",
+     "size": 13000,
+     "version": "B"
+    },
+    {
+     "path": "\\Projets\\outil\\rapport.docx",
+     "size": 15000,
+     "version": "C"
+    },
+    {
+     "path": "\\Users\\Alice\\Sauvegarde\\rapport.docx",
+     "size": 14000,
+     "version": "D"
+    }
+   ],
+   "name": "rapport.docx"
+  }
+ ],
+ "hashed_bytes": 0,
+ "root": "\\",
+ "skipped_changed": 0,
+ "skipped_cloud": 0,
+ "skipped_error": 0,
+ "skipped_generic": 1
+}
