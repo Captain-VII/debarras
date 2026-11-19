@@ -13,7 +13,9 @@ use debarras_core::duplicates::find_duplicates;
 use debarras_core::safety::{Env, Level, analyze};
 use debarras_core::samename::find_same_names;
 use debarras_core::scanner::{ScanOptions, scan};
+use debarras_core::search::{MAX_RESULTS, SearchQuery, search_files};
 use debarras_core::similar::find_similar;
+use debarras_core::stats::compute_stats;
 use serde_json::{Value, json};
 
 fn golden_dir() -> PathBuf {
@@ -105,6 +107,7 @@ fn core_matches_python() {
     check_samename(&fx, &cache);
     check_similar(&fx, &cache);
     check_cleanup(&fx);
+    check_stats_and_search(&fx, &cache, scan_id);
 }
 
 fn check_scan(fx: &Fixture, db: &Path) -> i64 {
@@ -362,4 +365,98 @@ fn check_cleanup(fx: &Fixture) {
         "auto": [paths.iter().map(|p| fx.rel(p)).collect::<Vec<_>>(), sizes(&auto_sizes)],
     });
     assert_eq!(got, golden("cleanup"));
+}
+
+/// Listes triées par taille : à taille égale, l'ordre Python dépend de la base ; Rust
+/// départage par chemin. On compare donc triées de la même façon.
+fn by_size(mut v: Vec<Value>) -> Value {
+    v.sort_by(|a, b| {
+        b["size"]
+            .as_i64()
+            .cmp(&a["size"].as_i64())
+            .then_with(|| a["path"].as_str().cmp(&b["path"].as_str()))
+    });
+    Value::Array(v)
+}
+
+fn check_stats_and_search(fx: &Fixture, cache: &Cache, scan_id: i64) {
+    let root = format!("{}\\", fx.letter);
+    let st = compute_stats(&cache.conn, scan_id, &root, 365).unwrap();
+    let files = |v: &[debarras_core::stats::FileStat]| {
+        by_size(
+            v.iter()
+                .map(|f| json!({"path": fx.rel(&f.path), "size": f.size}))
+                .collect(),
+        )
+    };
+    let got = json!({
+        "by_category": Value::Object(st.by_category.iter().map(|(c, s, n)| (c.clone(), json!([s, n]))).collect()),
+        "by_ext": st.by_ext.iter().map(|(e, s, n)| json!([e, s, n])).collect::<Vec<_>>(),
+        "empty_dirs": st.empty_dirs.iter().map(|p| fx.rel(p)).collect::<Vec<_>>(),
+        "file_count": st.file_count, "installers": files(&st.installers), "largest": files(&st.largest),
+        "old": files(&st.old), "old_days": st.old_days, "old_total": [st.old_total.0, st.old_total.1],
+        "root": fx.rel(&st.root), "scan_id": st.scan_id,
+        "temp_dirs": st.temp_dirs.iter().map(|d| json!({"file_count": d.file_count, "path": fx.rel(&d.path), "size": d.size})).collect::<Vec<_>>(),
+        "temp_files": files(&st.temp_files), "total_size": st.total_size,
+    });
+    let mut want = golden("stats");
+    for k in ["installers", "largest", "old", "temp_files"] {
+        want[k] = by_size(want[k].as_array().unwrap().clone());
+    }
+    assert_eq!(got, want);
+
+    let queries = [
+        (
+            "texte_rapport",
+            SearchQuery {
+                text: "rapport".into(),
+                ..Default::default()
+            },
+        ),
+        (
+            "motif_jpg",
+            SearchQuery {
+                text: "*.jpg".into(),
+                ..Default::default()
+            },
+        ),
+        (
+            "ext_pdf",
+            SearchQuery {
+                exts: vec![".pdf".into()],
+                ..Default::default()
+            },
+        ),
+        (
+            "taille_20k_40k",
+            SearchQuery {
+                min_size: 20000,
+                max_size: 40000,
+                ..Default::default()
+            },
+        ),
+        (
+            "ancien_365j",
+            SearchQuery {
+                older_than_days: 365,
+                ..Default::default()
+            },
+        ),
+    ];
+    let mut want = golden("search");
+    for (name, q) in queries {
+        let r = search_files(&cache.conn, &root, &q, MAX_RESULTS).unwrap();
+        let hits = by_size(
+            r.hits
+                .iter()
+                .map(|h| json!({"name": h.name, "path": fx.rel(&h.path), "size": h.size}))
+                .collect(),
+        );
+        want[name]["hits"] = by_size(want[name]["hits"].as_array().unwrap().clone());
+        assert_eq!(
+            json!({"count": r.count, "hits": hits, "total_size": r.total_size}),
+            want[name],
+            "{name}"
+        );
+    }
 }
