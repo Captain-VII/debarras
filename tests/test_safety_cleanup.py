@@ -29,6 +29,10 @@ def fake_home(tmp_path, monkeypatch):
     (os.environ.get("SystemRoot", r"C:\Windows") + r"\System32", True, SYSTEM),
     (r"C:\pagefile.sys", False, SYSTEM),
     (r"D:\System Volume Information", True, SYSTEM),
+    (r"D:\System Volume Information\tracking.log", False, SYSTEM),
+    (r"D:\Recovery\WindowsRE\winre.wim", False, SYSTEM),
+    (r"D:\Boot\BCD", False, SYSTEM),
+    (r"D:\Projets\boot\notes.txt", False, PERSONAL),   # « boot » hors de la racine : un dossier ordinaire
     ("D:\\", True, SYSTEM),
     (str(HOME), True, SYSTEM),
     (str(HOME / "NTUSER.DAT"), False, SYSTEM),
