@@ -334,6 +334,14 @@ impl Filter {
     }
 }
 
+/// `fnmatch.fnmatchcase(s, pat)` : la casse compte (passer des textes en minuscules).
+pub(crate) fn fnmatch_str(pat: &str, s: &str) -> bool {
+    fnmatch(
+        &pat.chars().collect::<Vec<_>>(),
+        &s.chars().collect::<Vec<_>>(),
+    )
+}
+
 /// `fnmatch` sur des textes déjà en minuscules : `*`, `?`, `[abc]`, `[a-z]`, `[!abc]` ;
 /// un `[` sans `]` est un caractère ordinaire.
 fn fnmatch(pat: &[char], s: &[char]) -> bool {

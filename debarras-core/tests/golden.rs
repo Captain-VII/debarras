@@ -7,7 +7,10 @@ use std::process::Command;
 use std::sync::atomic::AtomicBool;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use debarras_core::cache::Cache;
+use debarras_core::duplicates::find_duplicates;
 use debarras_core::safety::{Env, Level, analyze};
+use debarras_core::samename::find_same_names;
 use debarras_core::scanner::{ScanOptions, scan};
 use serde_json::{Value, json};
 
@@ -94,6 +97,10 @@ fn core_matches_python() {
     let db = fx._dir.path().join("cache.db");
     let scan_id = check_scan(&fx, &db);
     check_safety(&fx, &db, scan_id);
+    // Même ordre que make_golden.py : « même nom » réutilise les empreintes des doublons.
+    let cache = Cache::open(&db).unwrap();
+    check_duplicates(&fx, &cache);
+    check_samename(&fx, &cache);
 }
 
 fn check_scan(fx: &Fixture, db: &Path) -> i64 {
@@ -241,4 +248,47 @@ fn check_safety(fx: &Fixture, db: &Path, scan_id: i64) {
     }
     assert_eq!(sorted(summary.software.clone()), ws["software"]);
     assert_eq!(json!(summary.scan_id), ws["scan_id"]);
+}
+
+fn no_progress() -> impl FnMut(&str, u64, u64) {
+    |_, _, _| {}
+}
+
+fn check_duplicates(fx: &Fixture, cache: &Cache) {
+    let root = format!("{}\\", fx.letter);
+    let r = find_duplicates(cache, &root, 1, &AtomicBool::new(false), &mut no_progress()).unwrap();
+    let got = json!({
+        "cancelled": r.cancelled, "candidates": r.candidates, "hashed_bytes": r.hashed_bytes,
+        "min_size": r.min_size, "root": fx.rel(&r.root), "skipped_changed": r.skipped_changed,
+        "skipped_cloud": r.skipped_cloud, "skipped_error": r.skipped_error,
+        "groups": r.groups.iter().map(|g| json!({
+            "digest": g.digest, "size": g.size,
+            "files": g.files.iter().map(|f| json!({"path": fx.rel(&f.path), "size": f.size})).collect::<Vec<_>>(),
+        })).collect::<Vec<_>>(),
+    });
+    assert_eq!(got, golden("duplicates"));
+}
+
+fn check_samename(fx: &Fixture, cache: &Cache) {
+    let root = format!("{}\\", fx.letter);
+    let r = find_same_names(
+        cache,
+        &root,
+        1024,
+        true,
+        true,
+        &AtomicBool::new(false),
+        &mut no_progress(),
+    )
+    .unwrap();
+    let got = json!({
+        "cancelled": r.cancelled, "candidates": r.candidates, "hashed_bytes": r.hashed_bytes,
+        "root": fx.rel(&r.root), "skipped_changed": r.skipped_changed, "skipped_cloud": r.skipped_cloud,
+        "skipped_error": r.skipped_error, "skipped_generic": r.skipped_generic,
+        "groups": r.groups.iter().map(|g| json!({
+            "name": g.name,
+            "files": g.files.iter().map(|f| json!({"path": fx.rel(&f.path), "size": f.size, "version": f.version})).collect::<Vec<_>>(),
+        })).collect::<Vec<_>>(),
+    });
+    assert_eq!(got, golden("samename"));
 }
