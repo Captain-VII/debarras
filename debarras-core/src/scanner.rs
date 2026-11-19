@@ -409,7 +409,7 @@ pub fn extension(name: &str) -> String {
 }
 
 /// Date au format de `os.stat` : `sec + nsec * 1e-9`, `sec` arrondi vers le bas.
-fn py_time(t: io::Result<SystemTime>) -> f64 {
+pub(crate) fn py_time(t: io::Result<SystemTime>) -> f64 {
     let Ok(t) = t else { return 0.0 };
     let (sec, nsec) = match t.duration_since(UNIX_EPOCH) {
         Ok(d) => (d.as_secs() as i64, d.subsec_nanos()),
@@ -427,7 +427,7 @@ fn py_time(t: io::Result<SystemTime>) -> f64 {
 /// Le lien est-il une jonction (point de montage) vers un dossier ? Une erreur compte comme
 /// une jonction : Python ne suit pas un dossier qu'il ne peut pas examiner.
 #[cfg(windows)]
-fn is_dir_junction(entry: &fs::DirEntry) -> bool {
+pub(crate) fn is_dir_junction(entry: &fs::DirEntry) -> bool {
     use std::os::windows::ffi::OsStrExt;
     use std::os::windows::fs::MetadataExt;
     use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
@@ -455,7 +455,7 @@ fn is_dir_junction(entry: &fs::DirEntry) -> bool {
 }
 
 #[cfg(not(windows))]
-fn is_dir_junction(_entry: &fs::DirEntry) -> bool {
+pub(crate) fn is_dir_junction(_entry: &fs::DirEntry) -> bool {
     false
 }
 
