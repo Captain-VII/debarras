@@ -1,0 +1,13 @@
+[workspace]
+resolver = "3"
+members = ["debarras-core"]
+
+[workspace.package]
+edition = "2024"
+license = "MIT"
+
+[profile.release]
+lto = "thin"
+opt-level = 3
+panic = "abort"
+strip = true
