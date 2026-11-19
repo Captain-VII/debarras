@@ -39,6 +39,33 @@ pub fn norm(path: &str) -> String {
     out.to_lowercase().trim_end_matches('\\').to_string()
 }
 
+/// `(os.path.dirname, os.path.basename)` pour un chemin Windows : la racine garde son
+/// séparateur (`C:\a` → `C:\`), un lecteur seul reste tel quel (`c:` → `c:`).
+/// shortcut: un partage UNC remonte jusqu'à `\\serveur` au lieu de s'arrêter au partage ;
+/// sans effet sur les règles actuelles (aucun dossier connu n'y correspond).
+pub fn split(path: &str) -> (&str, &str) {
+    match path.rfind(['\\', '/']) {
+        Some(i) if path[..i].ends_with(':') || i == 0 => (&path[..=i], &path[i + 1..]),
+        Some(i) => (&path[..i], &path[i + 1..]),
+        None if path.ends_with(':') => (path, ""),
+        None => ("", path),
+    }
+}
+
+/// `os.path.dirname`.
+pub fn dirname(path: &str) -> &str {
+    split(path).0
+}
+
+/// `os.path.join(parent, name)` pour un chemin Windows.
+pub fn join(parent: &str, name: &str) -> String {
+    if parent.is_empty() || parent.ends_with(['\\', '/']) || parent.ends_with(':') {
+        format!("{parent}{name}")
+    } else {
+        format!("{parent}\\{name}")
+    }
+}
+
 /// Nom long d'un chemin (`C:\Users\RUNNER~1` → `C:\Users\runneradmin`), sans suivre les liens.
 /// Les variables d'environnement peuvent contenir des noms courts 8.3 alors que le scan
 /// produit des noms longs. Chemin inchangé si Windows ne le connaît pas.
@@ -64,6 +91,17 @@ pub fn long_path(path: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn split_and_join_like_ntpath() {
+        assert_eq!(split(r"C:\a\b.txt"), (r"C:\a", "b.txt"));
+        assert_eq!(split(r"C:\b.txt"), (r"C:\", "b.txt"));
+        assert_eq!(dirname(r"c:\"), r"c:\");
+        assert_eq!(dirname("c:"), "c:");
+        assert_eq!(dirname(r"c:\users\alice"), r"c:\users");
+        assert_eq!(join(r"C:\", "a"), r"C:\a");
+        assert_eq!(join(r"C:\a", "b"), r"C:\a\b");
+    }
 
     #[test]
     fn norm_like_python() {
