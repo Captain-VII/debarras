@@ -1,0 +1,50 @@
+{
+ "auto": [
+  [
+   "\\Users\\Alice\\AppData\\Local\\Temp\\vieux.tmp",
+   "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache",
+   "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache"
+  ],
+  {
+   "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache": 6000,
+   "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache": 3000,
+   "\\Users\\Alice\\AppData\\Local\\Temp\\vieux.tmp": 5000
+  }
+ ],
+ "targets": [
+  {
+   "count": 1,
+   "description": "Laissés par les installations et les logiciels dans X:\\Users\\Alice\\AppData\\Local\\Temp. Seuls les éléments inchangés depuis plus de 24 h sont proposés (les autres peuvent être en cours d'utilisation).",
+   "key": "temp",
+   "kind": "trash",
+   "note": "",
+   "paths": [
+    "\\Users\\Alice\\AppData\\Local\\Temp\\vieux.tmp"
+   ],
+   "recommended": true,
+   "size_known": true,
+   "sizes": {
+    "\\Users\\Alice\\AppData\\Local\\Temp\\vieux.tmp": 5000
+   },
+   "title": "Fichiers temporaires"
+  },
+  {
+   "count": 2,
+   "description": "Pages et images gardées pour accélérer la navigation. Vos favoris, mots de passe, historique et sessions ne sont pas touchés.",
+   "key": "browser:Google Chrome",
+   "kind": "trash",
+   "note": "",
+   "paths": [
+    "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache",
+    "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache"
+   ],
+   "recommended": true,
+   "size_known": true,
+   "sizes": {
+    "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache": 6000,
+    "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache": 3000
+   },
+   "title": "Cache de Google Chrome"
+  }
+ ]
+}

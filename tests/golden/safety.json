@@ -1,0 +1,947 @@
+{
+ "containers": [
+  "\\jeux",
+  "\\jeux\\steamlibrary",
+  "\\jeux\\steamlibrary\\steamapps",
+  "\\jeux\\steamlibrary\\steamapps\\common",
+  "\\jeux\\steamlibrary\\steamapps\\common\\aventure\\binaries",
+  "\\portable",
+  "\\program files",
+  "\\program files (x86)",
+  "\\users\\alice\\appdata\\local\\programs",
+  "\\users\\alice\\appdata\\local\\programs\\editeur",
+  "\\windows"
+ ],
+ "items": [
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\",
+   "reason": "Racine du lecteur"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\$Recycle.Bin",
+   "reason": "Corbeille : videz-la depuis Windows"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\$Recycle.Bin\\S-1-5-21",
+   "reason": "Corbeille : videz-la depuis Windows"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Archives",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Archives\\2020",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Jeux",
+   "reason": "Contient surtout un logiciel ou un jeu installé"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries\\Win64",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\data",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Portable",
+   "reason": "Contient surtout un logiciel ou un jeu installé"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Portable\\Outil",
+   "reason": "Fait partie d'un logiciel installé (bibliothèques .dll)"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Program Files",
+   "reason": "Dossier des programmes installés (X:\\Program Files)"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Program Files (x86)",
+   "reason": "Dossier des programmes installés (X:\\Program Files (x86))"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Program Files (x86)\\Vieux",
+   "reason": "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Program Files\\Common Files",
+   "reason": "Composant de Windows"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Program Files\\Studio",
+   "reason": "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Program Files\\Studio\\bin",
+   "reason": "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\ProgramData",
+   "reason": "Dossier de Windows (X:\\ProgramData)"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\ProgramData\\Vendor",
+   "reason": "Dossier de Windows (X:\\ProgramData)"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Projets",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Projets\\outil",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Projets\\outil\\.pytest_cache",
+   "reason": "Cache de tests, recréé automatiquement"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Projets\\outil\\.pytest_cache\\v",
+   "reason": "Cache de tests, recréé automatiquement"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Projets\\outil\\.venv",
+   "reason": "Environnement Python d'un projet (re-créable, mais le projet ne fonctionnera plus d'ici là)"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Projets\\outil\\.venv\\Lib",
+   "reason": "Environnement Python d'un projet (re-créable, mais le projet ne fonctionnera plus d'ici là)"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Projets\\outil\\outil",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Projets\\outil\\outil\\__pycache__",
+   "reason": "Cache Python, recréé automatiquement"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Projets\\site",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Projets\\site\\.git",
+   "reason": "Historique d'un projet (dépôt Git) : le supprimer perd les versions"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Projets\\site\\.git\\objects",
+   "reason": "Historique d'un projet (dépôt Git) : le supprimer perd les versions"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Projets\\site\\node_modules",
+   "reason": "Dépendances JavaScript, re-téléchargées par « npm install »"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Projets\\site\\node_modules\\lib",
+   "reason": "Dépendances JavaScript, re-téléchargées par « npm install »"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Projets\\site\\src",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Recovery",
+   "reason": "Fichier ou dossier système à la racine du lecteur"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\System Volume Information",
+   "reason": "Fichier ou dossier système à la racine du lecteur"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Users",
+   "reason": "Dossier des comptes utilisateurs"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Users\\Alice",
+   "reason": "Dossier des comptes utilisateurs"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\CrashDumps",
+   "reason": "Cache d'application (crashdumps), recréé automatiquement"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache",
+   "reason": "Cache d'application (cache), recréé automatiquement"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache\\Cache_Data",
+   "reason": "Cache d'application (cache), recréé automatiquement"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache",
+   "reason": "Cache d'application (code cache), recréé automatiquement"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache\\js",
+   "reason": "Cache d'application (code cache), recréé automatiquement"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs",
+   "reason": "Logiciel installé pour votre compte"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Debarras",
+   "reason": "Débarras lui-même"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur",
+   "reason": "Logiciel installé pour votre compte"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\lib",
+   "reason": "Logiciel installé pour votre compte"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp",
+   "reason": "Fichiers temporaires de Windows et des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\install-1a2b",
+   "reason": "Fichiers temporaires de Windows et des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Roaming",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Roaming\\Appli",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Documents",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Downloads",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Images",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Musique",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Photos",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Sauvegarde",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Users\\Default",
+   "reason": "Profil modèle de Windows"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Windows",
+   "reason": "Dossier de Windows (X:\\Windows)"
+  },
+  {
+   "dir": true,
+   "level": "system",
+   "path": "\\Windows\\System32",
+   "reason": "Dossier de Windows (X:\\Windows)"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\$Recycle.Bin\\S-1-5-21\\$R1.txt",
+   "reason": "Corbeille : videz-la depuis Windows"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Archives\\2020\\vacances.mov",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Archives\\rapport.docx",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Aventure.exe",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries\\Win64\\engine.dll",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\data\\pak00.pak",
+   "reason": "Bibliothèque de jeux Steam : désinstallez depuis le lanceur"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Portable\\Outil\\notes.txt",
+   "reason": "Fait partie d'un logiciel installé (bibliothèques .dll)"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Portable\\Outil\\outil.dll",
+   "reason": "Fait partie d'un logiciel installé (bibliothèques .dll)"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Portable\\Outil\\outil.exe",
+   "reason": "Fait partie d'un logiciel installé (bibliothèques .dll)"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Program Files (x86)\\Vieux\\vieux.dll",
+   "reason": "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Program Files (x86)\\Vieux\\vieux.exe",
+   "reason": "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\Program Files\\Common Files\\shared.dll",
+   "reason": "Composant de Windows"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Program Files\\Studio\\bin\\render.dll",
+   "reason": "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Program Files\\Studio\\studio.exe",
+   "reason": "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\ProgramData\\Vendor\\settings.dat",
+   "reason": "Dossier de Windows (X:\\ProgramData)"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Projets\\outil\\.pytest_cache\\v\\cache.json",
+   "reason": "Cache de tests, recréé automatiquement"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Projets\\outil\\.venv\\Lib\\dep.pyd",
+   "reason": "Environnement Python d'un projet (re-créable, mais le projet ne fonctionnera plus d'ici là)"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Projets\\outil\\outil\\__pycache__\\mod.cpython-312.pyc",
+   "reason": "Cache Python, recréé automatiquement"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Projets\\outil\\rapport.docx",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Projets\\site\\.git\\objects\\pack.pack",
+   "reason": "Historique d'un projet (dépôt Git) : le supprimer perd les versions"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Projets\\site\\node_modules\\lib\\index.js",
+   "reason": "Dépendances JavaScript, re-téléchargées par « npm install »"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Projets\\site\\src\\page.tsx",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\Recovery\\winre.wim",
+   "reason": "Fichier ou dossier système à la racine du lecteur"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\System Volume Information\\tracking.log",
+   "reason": "Fichier ou dossier système à la racine du lecteur"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\CrashDumps\\appli.exe.1.dmp",
+   "reason": "Cache d'application (crashdumps), recréé automatiquement"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Bookmarks",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache\\Cache_Data\\f_000001",
+   "reason": "Cache d'application (cache), recréé automatiquement"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache\\js\\0001_0",
+   "reason": "Cache d'application (code cache), recréé automatiquement"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Debarras\\Debarras.exe",
+   "reason": "Débarras lui-même"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\editeur.exe",
+   "reason": "Logiciel installé pour votre compte"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\lib\\core.dll",
+   "reason": "Logiciel installé pour votre compte"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\install-1a2b\\paquet.cab",
+   "reason": "Fichiers temporaires de Windows et des logiciels"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\recent.tmp",
+   "reason": "Fichiers temporaires de Windows et des logiciels"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\vieux.tmp",
+   "reason": "Fichiers temporaires de Windows et des logiciels"
+  },
+  {
+   "dir": false,
+   "level": "software",
+   "path": "\\Users\\Alice\\AppData\\Roaming\\Appli\\config.ini",
+   "reason": "AppData : réglages et données des logiciels"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Documents\\contrat.pdf",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Documents\\facture.pdf",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Documents\\rapport.docx",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Documents\\readme.txt",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Downloads\\notice.pdf",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "cleanable",
+   "path": "\\Users\\Alice\\Downloads\\setup-jeu.exe",
+   "reason": "Installeur téléchargé : le logiciel reste installé sans lui"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Images\\foret-miroir.png",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Images\\foret.png",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Images\\plage-petite.png",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Images\\plage.jpg",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Images\\plage.png",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Musique\\piste1.flac",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Musique\\piste2.flac",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\Users\\Alice\\NTUSER.DAT",
+   "reason": "Registre de votre compte Windows"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Photos\\vacances.mov",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Sauvegarde\\contrat.pdf",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Sauvegarde\\rapport.docx",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Sauvegarde\\readme.txt",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "personal",
+   "path": "\\Users\\Alice\\Sauvegarde\\vacances (copie).mov",
+   "reason": "Vos fichiers"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\Users\\Default\\NTUSER.DAT",
+   "reason": "Profil modèle de Windows"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\Windows\\System32\\kernel32.dll",
+   "reason": "Dossier de Windows (X:\\Windows)"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\Windows\\notepad.exe",
+   "reason": "Dossier de Windows (X:\\Windows)"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\hiberfil.sys",
+   "reason": "Fichier ou dossier système à la racine du lecteur"
+  },
+  {
+   "dir": false,
+   "level": "system",
+   "path": "\\pagefile.sys",
+   "reason": "Fichier ou dossier système à la racine du lecteur"
+  }
+ ],
+ "software_dirs": [
+  "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure",
+  "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries",
+  "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries\\Win64",
+  "\\Portable\\Outil",
+  "\\Program Files (x86)\\Vieux",
+  "\\Program Files\\Common Files",
+  "\\Program Files\\Studio",
+  "\\Program Files\\Studio\\bin",
+  "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur",
+  "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\lib",
+  "\\Windows",
+  "\\Windows\\System32"
+ ],
+ "summary": {
+  "scan_id": 1,
+  "software": [
+   "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure",
+   "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries",
+   "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries\\Win64",
+   "\\Portable\\Outil",
+   "\\Program Files (x86)\\Vieux",
+   "\\Program Files\\Common Files",
+   "\\Program Files\\Studio",
+   "\\Program Files\\Studio\\bin",
+   "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur",
+   "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\lib",
+   "\\Windows",
+   "\\Windows\\System32"
+  ],
+  "top": {
+   "cleanable": [
+    [
+     "\\Users\\Alice\\AppData\\Local\\Temp",
+     15000,
+     "Fichiers temporaires de Windows et des logiciels"
+    ],
+    [
+     "\\Users\\Alice\\AppData\\Local\\CrashDumps",
+     7000,
+     "Cache d'application (crashdumps), recréé automatiquement"
+    ],
+    [
+     "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache",
+     6000,
+     "Cache d'application (cache), recréé automatiquement"
+    ],
+    [
+     "\\Projets\\site\\node_modules",
+     4000,
+     "Dépendances JavaScript, re-téléchargées par « npm install »"
+    ],
+    [
+     "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache",
+     3000,
+     "Cache d'application (code cache), recréé automatiquement"
+    ],
+    [
+     "\\Projets\\outil\\outil\\__pycache__",
+     1500,
+     "Cache Python, recréé automatiquement"
+    ],
+    [
+     "\\Projets\\outil\\.pytest_cache",
+     200,
+     "Cache de tests, recréé automatiquement"
+    ]
+   ],
+   "personal": [
+    [
+     "\\Users\\Alice\\Sauvegarde",
+     86500,
+     "Vos fichiers"
+    ],
+    [
+     "\\Users\\Alice\\Musique",
+     68192,
+     "Vos fichiers"
+    ],
+    [
+     "\\Archives",
+     63000,
+     "Vos fichiers"
+    ],
+    [
+     "\\Users\\Alice\\Photos",
+     50000,
+     "Vos fichiers"
+    ],
+    [
+     "\\Users\\Alice\\Documents",
+     50000,
+     "Vos fichiers"
+    ],
+    [
+     "\\Users\\Alice\\Downloads",
+     38000,
+     "Vos fichiers"
+    ],
+    [
+     "\\Projets",
+     33700,
+     "Vos fichiers"
+    ],
+    [
+     "\\Users\\Alice\\Images",
+     29184,
+     "Vos fichiers"
+    ]
+   ],
+   "software": [
+    [
+     "\\Users\\Alice\\AppData",
+     53200,
+     "AppData : réglages et données des logiciels"
+    ],
+    [
+     "\\Jeux",
+     36000,
+     "Contient surtout un logiciel ou un jeu installé"
+    ],
+    [
+     "\\Program Files\\Studio",
+     16000,
+     "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+    ],
+    [
+     "\\Portable",
+     12500,
+     "Contient surtout un logiciel ou un jeu installé"
+    ],
+    [
+     "\\Program Files (x86)\\Vieux",
+     10000,
+     "Logiciel installé : désinstallez-le depuis Paramètres › Applications"
+    ],
+    [
+     "\\Projets\\site\\.git",
+     6000,
+     "Historique d'un projet (dépôt Git) : le supprimer perd les versions"
+    ],
+    [
+     "\\Projets\\outil\\.venv",
+     5000,
+     "Environnement Python d'un projet (re-créable, mais le projet ne fonctionnera plus d'ici là)"
+    ]
+   ],
+   "system": [
+    [
+     "\\",
+     585276,
+     "Racine du lecteur"
+    ]
+   ]
+  },
+  "totals": {
+   "cleanable": 66700,
+   "personal": 371876,
+   "software": 107700,
+   "system": 39000
+  }
+ }
+}

@@ -1,0 +1,680 @@
+{
+ "by_category": {
+  "Archives": [
+   9000,
+   1
+  ],
+  "Audio": [
+   68192,
+   2
+  ],
+  "Autres": [
+   70200,
+   15
+  ],
+  "Code": [
+   7700,
+   4
+  ],
+  "Documents": [
+   127000,
+   12
+  ],
+  "Exécutables": [
+   124000,
+   17
+  ],
+  "Images": [
+   29184,
+   5
+  ],
+  "Vidéos": [
+   150000,
+   3
+  ]
+ },
+ "by_ext": [
+  [
+   ".mov",
+   150000,
+   3
+  ],
+  [
+   ".exe",
+   77000,
+   8
+  ],
+  [
+   ".flac",
+   68192,
+   2
+  ],
+  [
+   ".pdf",
+   60000,
+   4
+  ],
+  [
+   ".docx",
+   57000,
+   4
+  ],
+  [
+   ".dll",
+   39000,
+   7
+  ],
+  [
+   ".png",
+   21512,
+   4
+  ],
+  [
+   ".pak",
+   20000,
+   1
+  ],
+  [
+   ".txt",
+   10000,
+   4
+  ],
+  [
+   "",
+   9800,
+   3
+  ],
+  [
+   ".cab",
+   9000,
+   1
+  ],
+  [
+   ".dat",
+   8000,
+   3
+  ],
+  [
+   ".sys",
+   8000,
+   2
+  ],
+  [
+   ".jpg",
+   7672,
+   1
+  ],
+  [
+   ".dmp",
+   7000,
+   1
+  ],
+  [
+   ".pack",
+   6000,
+   1
+  ],
+  [
+   ".tmp",
+   6000,
+   2
+  ],
+  [
+   ".pyd",
+   5000,
+   1
+  ],
+  [
+   ".js",
+   4000,
+   1
+  ],
+  [
+   ".log",
+   4000,
+   1
+  ],
+  [
+   ".wim",
+   4000,
+   1
+  ],
+  [
+   ".tsx",
+   2000,
+   1
+  ],
+  [
+   ".pyc",
+   1500,
+   1
+  ],
+  [
+   ".ini",
+   400,
+   1
+  ],
+  [
+   ".json",
+   200,
+   1
+  ]
+ ],
+ "empty_dirs": [],
+ "file_count": 59,
+ "installers": [
+  {
+   "path": "\\Users\\Alice\\Downloads\\setup-jeu.exe",
+   "size": 30000
+  }
+ ],
+ "largest": [
+  {
+   "path": "\\Archives\\2020\\vacances.mov",
+   "size": 50000
+  },
+  {
+   "path": "\\Users\\Alice\\Photos\\vacances.mov",
+   "size": 50000
+  },
+  {
+   "path": "\\Users\\Alice\\Sauvegarde\\vacances (copie).mov",
+   "size": 50000
+  },
+  {
+   "path": "\\Users\\Alice\\Musique\\piste1.flac",
+   "size": 34096
+  },
+  {
+   "path": "\\Users\\Alice\\Musique\\piste2.flac",
+   "size": 34096
+  },
+  {
+   "path": "\\Users\\Alice\\Downloads\\setup-jeu.exe",
+   "size": 30000
+  },
+  {
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\data\\pak00.pak",
+   "size": 20000
+  },
+  {
+   "path": "\\Users\\Alice\\Documents\\contrat.pdf",
+   "size": 20000
+  },
+  {
+   "path": "\\Users\\Alice\\Sauvegarde\\contrat.pdf",
+   "size": 20000
+  },
+  {
+   "path": "\\Projets\\outil\\rapport.docx",
+   "size": 15000
+  },
+  {
+   "path": "\\Users\\Alice\\Documents\\rapport.docx",
+   "size": 15000
+  },
+  {
+   "path": "\\Users\\Alice\\Sauvegarde\\rapport.docx",
+   "size": 14000
+  },
+  {
+   "path": "\\Archives\\rapport.docx",
+   "size": 13000
+  },
+  {
+   "path": "\\Users\\Alice\\Documents\\facture.pdf",
+   "size": 12000
+  },
+  {
+   "path": "\\Program Files\\Studio\\studio.exe",
+   "size": 9000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Debarras\\Debarras.exe",
+   "size": 9000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\install-1a2b\\paquet.cab",
+   "size": 9000
+  },
+  {
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Aventure.exe",
+   "size": 8000
+  },
+  {
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries\\Win64\\engine.dll",
+   "size": 8000
+  },
+  {
+   "path": "\\Users\\Alice\\Downloads\\notice.pdf",
+   "size": 8000
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\plage.jpg",
+   "size": 7672
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\plage-petite.png",
+   "size": 7032
+  },
+  {
+   "path": "\\Program Files\\Studio\\bin\\render.dll",
+   "size": 7000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\CrashDumps\\appli.exe.1.dmp",
+   "size": 7000
+  },
+  {
+   "path": "\\Portable\\Outil\\outil.dll",
+   "size": 6000
+  },
+  {
+   "path": "\\Portable\\Outil\\outil.exe",
+   "size": 6000
+  },
+  {
+   "path": "\\Projets\\site\\.git\\objects\\pack.pack",
+   "size": 6000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache\\Cache_Data\\f_000001",
+   "size": 6000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\editeur.exe",
+   "size": 6000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\lib\\core.dll",
+   "size": 6000
+  },
+  {
+   "path": "\\Program Files (x86)\\Vieux\\vieux.dll",
+   "size": 5000
+  },
+  {
+   "path": "\\Program Files (x86)\\Vieux\\vieux.exe",
+   "size": 5000
+  },
+  {
+   "path": "\\Projets\\outil\\.venv\\Lib\\dep.pyd",
+   "size": 5000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\vieux.tmp",
+   "size": 5000
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\foret-miroir.png",
+   "size": 4956
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\foret.png",
+   "size": 4808
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\plage.png",
+   "size": 4716
+  },
+  {
+   "path": "\\hiberfil.sys",
+   "size": 4000
+  },
+  {
+   "path": "\\pagefile.sys",
+   "size": 4000
+  },
+  {
+   "path": "\\$Recycle.Bin\\S-1-5-21\\$R1.txt",
+   "size": 4000
+  },
+  {
+   "path": "\\ProgramData\\Vendor\\settings.dat",
+   "size": 4000
+  },
+  {
+   "path": "\\Projets\\site\\node_modules\\lib\\index.js",
+   "size": 4000
+  },
+  {
+   "path": "\\Recovery\\winre.wim",
+   "size": 4000
+  },
+  {
+   "path": "\\System Volume Information\\tracking.log",
+   "size": 4000
+  },
+  {
+   "path": "\\Windows\\notepad.exe",
+   "size": 4000
+  },
+  {
+   "path": "\\Windows\\System32\\kernel32.dll",
+   "size": 4000
+  },
+  {
+   "path": "\\Program Files\\Common Files\\shared.dll",
+   "size": 3000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache\\js\\0001_0",
+   "size": 3000
+  },
+  {
+   "path": "\\Users\\Alice\\Documents\\readme.txt",
+   "size": 3000
+  },
+  {
+   "path": "\\Users\\Alice\\Sauvegarde\\readme.txt",
+   "size": 2500
+  },
+  {
+   "path": "\\Projets\\site\\src\\page.tsx",
+   "size": 2000
+  },
+  {
+   "path": "\\Users\\Alice\\NTUSER.DAT",
+   "size": 2000
+  },
+  {
+   "path": "\\Users\\Default\\NTUSER.DAT",
+   "size": 2000
+  },
+  {
+   "path": "\\Projets\\outil\\outil\\__pycache__\\mod.cpython-312.pyc",
+   "size": 1500
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\recent.tmp",
+   "size": 1000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Bookmarks",
+   "size": 800
+  },
+  {
+   "path": "\\Portable\\Outil\\notes.txt",
+   "size": 500
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Roaming\\Appli\\config.ini",
+   "size": 400
+  },
+  {
+   "path": "\\Projets\\outil\\.pytest_cache\\v\\cache.json",
+   "size": 200
+  }
+ ],
+ "old": [
+  {
+   "path": "\\Archives\\2020\\vacances.mov",
+   "size": 50000
+  },
+  {
+   "path": "\\Users\\Alice\\Photos\\vacances.mov",
+   "size": 50000
+  },
+  {
+   "path": "\\Users\\Alice\\Sauvegarde\\vacances (copie).mov",
+   "size": 50000
+  },
+  {
+   "path": "\\Users\\Alice\\Musique\\piste1.flac",
+   "size": 34096
+  },
+  {
+   "path": "\\Users\\Alice\\Musique\\piste2.flac",
+   "size": 34096
+  },
+  {
+   "path": "\\Users\\Alice\\Downloads\\setup-jeu.exe",
+   "size": 30000
+  },
+  {
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\data\\pak00.pak",
+   "size": 20000
+  },
+  {
+   "path": "\\Users\\Alice\\Documents\\contrat.pdf",
+   "size": 20000
+  },
+  {
+   "path": "\\Users\\Alice\\Sauvegarde\\contrat.pdf",
+   "size": 20000
+  },
+  {
+   "path": "\\Projets\\outil\\rapport.docx",
+   "size": 15000
+  },
+  {
+   "path": "\\Users\\Alice\\Sauvegarde\\rapport.docx",
+   "size": 14000
+  },
+  {
+   "path": "\\Archives\\rapport.docx",
+   "size": 13000
+  },
+  {
+   "path": "\\Users\\Alice\\Documents\\facture.pdf",
+   "size": 12000
+  },
+  {
+   "path": "\\Program Files\\Studio\\studio.exe",
+   "size": 9000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Debarras\\Debarras.exe",
+   "size": 9000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\install-1a2b\\paquet.cab",
+   "size": 9000
+  },
+  {
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Aventure.exe",
+   "size": 8000
+  },
+  {
+   "path": "\\Jeux\\SteamLibrary\\steamapps\\common\\Aventure\\Binaries\\Win64\\engine.dll",
+   "size": 8000
+  },
+  {
+   "path": "\\Users\\Alice\\Downloads\\notice.pdf",
+   "size": 8000
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\plage.jpg",
+   "size": 7672
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\plage-petite.png",
+   "size": 7032
+  },
+  {
+   "path": "\\Program Files\\Studio\\bin\\render.dll",
+   "size": 7000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\CrashDumps\\appli.exe.1.dmp",
+   "size": 7000
+  },
+  {
+   "path": "\\Portable\\Outil\\outil.dll",
+   "size": 6000
+  },
+  {
+   "path": "\\Portable\\Outil\\outil.exe",
+   "size": 6000
+  },
+  {
+   "path": "\\Projets\\site\\.git\\objects\\pack.pack",
+   "size": 6000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache\\Cache_Data\\f_000001",
+   "size": 6000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\editeur.exe",
+   "size": 6000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Programs\\Editeur\\lib\\core.dll",
+   "size": 6000
+  },
+  {
+   "path": "\\Program Files (x86)\\Vieux\\vieux.dll",
+   "size": 5000
+  },
+  {
+   "path": "\\Program Files (x86)\\Vieux\\vieux.exe",
+   "size": 5000
+  },
+  {
+   "path": "\\Projets\\outil\\.venv\\Lib\\dep.pyd",
+   "size": 5000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp\\vieux.tmp",
+   "size": 5000
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\foret-miroir.png",
+   "size": 4956
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\foret.png",
+   "size": 4808
+  },
+  {
+   "path": "\\Users\\Alice\\Images\\plage.png",
+   "size": 4716
+  },
+  {
+   "path": "\\hiberfil.sys",
+   "size": 4000
+  },
+  {
+   "path": "\\pagefile.sys",
+   "size": 4000
+  },
+  {
+   "path": "\\$Recycle.Bin\\S-1-5-21\\$R1.txt",
+   "size": 4000
+  },
+  {
+   "path": "\\ProgramData\\Vendor\\settings.dat",
+   "size": 4000
+  },
+  {
+   "path": "\\Projets\\site\\node_modules\\lib\\index.js",
+   "size": 4000
+  },
+  {
+   "path": "\\Recovery\\winre.wim",
+   "size": 4000
+  },
+  {
+   "path": "\\System Volume Information\\tracking.log",
+   "size": 4000
+  },
+  {
+   "path": "\\Windows\\notepad.exe",
+   "size": 4000
+  },
+  {
+   "path": "\\Windows\\System32\\kernel32.dll",
+   "size": 4000
+  },
+  {
+   "path": "\\Program Files\\Common Files\\shared.dll",
+   "size": 3000
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache\\js\\0001_0",
+   "size": 3000
+  },
+  {
+   "path": "\\Users\\Alice\\Documents\\readme.txt",
+   "size": 3000
+  },
+  {
+   "path": "\\Users\\Alice\\Sauvegarde\\readme.txt",
+   "size": 2500
+  },
+  {
+   "path": "\\Projets\\site\\src\\page.tsx",
+   "size": 2000
+  },
+  {
+   "path": "\\Users\\Alice\\NTUSER.DAT",
+   "size": 2000
+  },
+  {
+   "path": "\\Users\\Default\\NTUSER.DAT",
+   "size": 2000
+  },
+  {
+   "path": "\\Projets\\outil\\outil\\__pycache__\\mod.cpython-312.pyc",
+   "size": 1500
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Bookmarks",
+   "size": 800
+  },
+  {
+   "path": "\\Portable\\Outil\\notes.txt",
+   "size": 500
+  },
+  {
+   "path": "\\Users\\Alice\\AppData\\Roaming\\Appli\\config.ini",
+   "size": 400
+  },
+  {
+   "path": "\\Projets\\outil\\.pytest_cache\\v\\cache.json",
+   "size": 200
+  }
+ ],
+ "old_days": 365,
+ "old_total": [
+  569276,
+  57
+ ],
+ "root": "\\",
+ "scan_id": 1,
+ "temp_dirs": [
+  {
+   "file_count": 3,
+   "path": "\\Users\\Alice\\AppData\\Local\\Temp",
+   "size": 15000
+  },
+  {
+   "file_count": 1,
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache",
+   "size": 6000
+  },
+  {
+   "file_count": 1,
+   "path": "\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Code Cache",
+   "size": 3000
+  },
+  {
+   "file_count": 1,
+   "path": "\\Projets\\outil\\outil\\__pycache__",
+   "size": 1500
+  },
+  {
+   "file_count": 1,
+   "path": "\\Projets\\outil\\.pytest_cache",
+   "size": 200
+  }
+ ],
+ "temp_files": [
+  {
+   "path": "\\Users\\Alice\\AppData\\Local\\CrashDumps\\appli.exe.1.dmp",
+   "size": 7000
+  }
+ ],
+ "total_size": 585276
+}
