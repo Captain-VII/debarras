@@ -9,3 +9,4 @@ pub mod paths;
 pub mod safety;
 pub mod samename;
 pub mod scanner;
+pub mod similar;
