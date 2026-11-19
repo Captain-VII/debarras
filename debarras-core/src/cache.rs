@@ -19,6 +19,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{Connection, OptionalExtension, Result, params};
 
+use crate::paths::{join, split};
+
 pub const SCHEMA_VERSION: i64 = 4;
 
 const SCHEMA: &str = r"
@@ -517,25 +519,6 @@ fn prune_dirpaths(conn: &Connection, ids: &mut HashMap<String, i64>) -> Result<(
     Ok(())
 }
 
-/// `os.path.dirname` / `basename` pour un chemin Windows.
-fn split(path: &str) -> (&str, &str) {
-    match path.rfind(['\\', '/']) {
-        // Garde le séparateur de la racine : `C:\a` → (`C:\`, `a`), comme ntpath.
-        Some(i) if path[..i].ends_with(':') || i == 0 => (&path[..=i], &path[i + 1..]),
-        Some(i) => (&path[..i], &path[i + 1..]),
-        None => ("", path),
-    }
-}
-
-/// `os.path.join(parent, name)` pour un chemin Windows.
-fn join(parent: &str, name: &str) -> String {
-    if parent.is_empty() || parent.ends_with(['\\', '/']) || parent.ends_with(':') {
-        format!("{parent}{name}")
-    } else {
-        format!("{parent}\\{name}")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -601,14 +584,6 @@ mod tests {
             subtree("p", r"C:\").1,
             [r"C:\".to_string(), r"C:\".into(), r"C:]".into()]
         );
-    }
-
-    #[test]
-    fn split_and_join_like_ntpath() {
-        assert_eq!(split(r"C:\a\b.txt"), (r"C:\a", "b.txt"));
-        assert_eq!(split(r"C:\b.txt"), (r"C:\", "b.txt"));
-        assert_eq!(join(r"C:\", "a"), r"C:\a");
-        assert_eq!(join(r"C:\a", "b"), r"C:\a\b");
     }
 
     #[test]
