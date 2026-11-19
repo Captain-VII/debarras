@@ -177,10 +177,11 @@ class Classifier:
             if inner[0] in _WINDOWS_PROGRAMS or inner[0].startswith(("windows ", "microsoft.net")):
                 return Verdict(SYSTEM, "Composant de Windows")
             return Verdict(SOFTWARE, "Logiciel installé : désinstallez-le depuis Paramètres › Applications")
-        if len(parts) == 1 and (name in _ROOT_SYSTEM_DIRS or (not is_dir and name in _ROOT_SYSTEM_FILES)):
-            return Verdict(SYSTEM, "Fichier ou dossier système à la racine du lecteur")
         if "$recycle.bin" in parts:
             return Verdict(SYSTEM, "Corbeille : videz-la depuis Windows")
+        # Dossier système de la racine, contenu compris (Recovery\winre.wim, Boot\BCD…).
+        if parts[0] in _ROOT_SYSTEM_DIRS or (len(parts) == 1 and not is_dir and name in _ROOT_SYSTEM_FILES):
+            return Verdict(SYSTEM, "Fichier ou dossier système à la racine du lecteur")
         if p in (self.home, self.users):
             return Verdict(SYSTEM, "Dossier des comptes utilisateurs")
         if _under(p, self.users) and len(p) > len(self.users):
