@@ -926,6 +926,9 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let long = tmp.path().join("dossier temporaire au nom long");
         std::fs::create_dir(&long).unwrap();
+        // Le dossier temporaire peut lui-même être en nom court (runner GitHub : RUNNER~1) ;
+        // le scanner, lui, produit toujours des noms longs.
+        let long = std::path::PathBuf::from(long_path(&long.to_string_lossy()));
         let wide: Vec<u16> = long.as_os_str().encode_wide().chain([0]).collect();
         let mut buf = vec![0u16; 32768];
         // SAFETY : chemin terminé par un zéro, tampon de la taille annoncée.
