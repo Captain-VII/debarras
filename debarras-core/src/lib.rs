@@ -3,6 +3,7 @@
 
 pub mod actions;
 pub mod cache;
+pub mod cleanup;
 pub mod duplicates;
 pub mod filetypes;
 pub mod finder;

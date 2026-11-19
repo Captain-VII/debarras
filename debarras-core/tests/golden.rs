@@ -8,6 +8,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use debarras_core::cache::Cache;
+use debarras_core::cleanup::{Target, auto_selection, browser_targets, temp_target};
 use debarras_core::duplicates::find_duplicates;
 use debarras_core::safety::{Env, Level, analyze};
 use debarras_core::samename::find_same_names;
@@ -103,6 +104,7 @@ fn core_matches_python() {
     check_duplicates(&fx, &cache);
     check_samename(&fx, &cache);
     check_similar(&fx, &cache);
+    check_cleanup(&fx);
 }
 
 fn check_scan(fx: &Fixture, db: &Path) -> i64 {
@@ -149,10 +151,11 @@ fn check_scan(fx: &Fixture, db: &Path) -> i64 {
     r.scan_id
 }
 
-fn check_safety(fx: &Fixture, db: &Path, scan_id: i64) {
+/// Environnement du faux PC, comme le règle `make_golden.py`.
+fn fixture_env(fx: &Fixture) -> Env {
     let l = &fx.letter;
     let u = format!(r"{l}\Users\Alice");
-    let env = Env {
+    Env {
         system_root: format!(r"{l}\Windows"),
         program_data: format!(r"{l}\ProgramData"),
         program_files: [
@@ -163,7 +166,13 @@ fn check_safety(fx: &Fixture, db: &Path, scan_id: i64) {
         home: u.clone(),
         local_appdata: Some(format!(r"{u}\AppData\Local")),
         temp: Some(format!(r"{u}\AppData\Local\Temp")),
-    };
+    }
+}
+
+fn check_safety(fx: &Fixture, db: &Path, scan_id: i64) {
+    let l = &fx.letter;
+    let u = format!(r"{l}\Users\Alice");
+    let env = fixture_env(fx);
     let root = format!("{l}\\");
     let app_dir = format!(r"{u}\AppData\Local\Programs\Debarras");
     let (clf, summary) = analyze(
@@ -326,4 +335,31 @@ fn check_similar(fx: &Fixture, cache: &Cache) {
             .collect::<Vec<_>>(),
     });
     assert_eq!(view(&got), view(&golden("similar")));
+}
+
+fn check_cleanup(fx: &Fixture) {
+    let env = fixture_env(fx);
+    let no = AtomicBool::new(false);
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs_f64();
+    let mut targets = vec![temp_target(&env, &no, now)];
+    targets.extend(browser_targets(&env, &no, &Default::default()));
+    let sizes = |s: &[(String, i64)]| -> Value {
+        Value::Object(s.iter().map(|(p, n)| (fx.rel(p), json!(n))).collect())
+    };
+    let target = |t: &Target| {
+        json!({
+            "count": t.count, "description": t.description.replace(fx.letter.as_str(), "X:"), "key": t.key,
+            "kind": t.kind, "note": t.note, "paths": t.paths.iter().map(|p| fx.rel(p)).collect::<Vec<_>>(),
+            "recommended": t.recommended, "size_known": t.size_known, "sizes": sizes(&t.sizes), "title": t.title,
+        })
+    };
+    let (paths, auto_sizes) = auto_selection(&targets);
+    let got = json!({
+        "targets": targets.iter().map(target).collect::<Vec<_>>(),
+        "auto": [paths.iter().map(|p| fx.rel(p)).collect::<Vec<_>>(), sizes(&auto_sizes)],
+    });
+    assert_eq!(got, golden("cleanup"));
 }
