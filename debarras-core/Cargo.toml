@@ -1,0 +1,15 @@
+[package]
+name = "debarras-core"
+version = "0.1.0"
+description = "Cœur de Débarras : scan, cache, classification, recherches et actions"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+rusqlite = { version = "0.37", features = ["bundled"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }
+
+[dev-dependencies]
+tempfile = "3"
