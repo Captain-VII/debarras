@@ -1,18 +1,18 @@
 ﻿# Prépare (et publie avec -Publish) une release GitHub de Débarras.
 #   powershell -ExecutionPolicy Bypass -File release.ps1            -> tests + build + zip + empreinte
 #   powershell -ExecutionPolicy Bypass -File release.ps1 -Publish   -> idem puis tag, push et release
-# Version et dépôt lus dans version.py ; notes lues dans CHANGELOG.md (section « ## <version> »).
+# Version lue dans src-tauri\Cargo.toml, dépôt dans debarras-core\src\updater.rs ;
+# notes lues dans CHANGELOG.md (section « ## <version> »).
 param([switch]$Publish)
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-$src = Get-Content version.py -Raw
-$version = [regex]::Match($src, '__version__ = "([^"]+)"').Groups[1].Value
-$repo = [regex]::Match($src, 'GITHUB_REPO = "([^"]+)"').Groups[1].Value
+$version = [regex]::Match((Get-Content src-tauri\Cargo.toml -Raw), '(?m)^version = "([^"]+)"').Groups[1].Value
+$repo = [regex]::Match((Get-Content debarras-core\src\updater.rs -Raw), 'GITHUB_REPO: &str = "([^"]+)"').Groups[1].Value
 $tag = "v$version"
-if (-not $version -or -not $repo) { throw "version.py illisible" }
+if (-not $version -or -not $repo) { throw "Version ou dépôt illisible" }
 if (git status --porcelain) { throw "Modifications non commitées : commitez avant de publier." }
-if (git tag -l $tag) { throw "Le tag $tag existe déjà : augmentez la version dans version.py." }
+if (git tag -l $tag) { throw "Le tag $tag existe déjà : augmentez la version dans src-tauri\Cargo.toml." }
 
 # Notes de version : section du CHANGELOG correspondant exactement à la version.
 $changelog = Get-Content CHANGELOG.md -Raw -Encoding UTF8
@@ -21,8 +21,10 @@ if (-not $m.Success) { throw "Pas de section « ## $version » dans CHANGELOG.md
 $notes = Join-Path $env:TEMP "debarras-notes-$version.md"
 [IO.File]::WriteAllText($notes, $m.Groups[1].Value.Trim(), [Text.UTF8Encoding]::new($false))
 
-& .\.venv\Scripts\python.exe -m pytest -q
+cargo test --locked
 if ($LASTEXITCODE -ne 0) { throw "Tests en échec : release annulée." }
+cargo clippy --locked --all-targets -- -D warnings
+if ($LASTEXITCODE -ne 0) { throw "Clippy en échec : release annulée." }
 & .\build.ps1
 
 $name = "Debarras-$version-win64.zip"

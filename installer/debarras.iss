@@ -1,5 +1,5 @@
 ﻿; Installateur Windows de Débarras (Inno Setup 6).
-; Construit par build_installer.ps1 :  ISCC /DAppVersion=x.y.z installer\debarras.iss
+; Construit par build.ps1 :  ISCC /DAppVersion=x.y.z installer\debarras.iss
 ; Installation par utilisateur (sans droits administrateur) dans %LOCALAPPDATA%\Programs\Debarras :
 ; la mise à jour automatique peut ainsi remplacer le dossier sans élévation.
 
@@ -47,8 +47,10 @@ Name: "fr"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "Créer un raccourci sur le Bureau"; GroupDescription: "Raccourcis :"; Flags: unchecked
 
 [InstallDelete]
-; Version précédente remplacée en entier (pas de fichiers orphelins d'une ancienne version).
+; Version précédente remplacée en entier (pas de fichiers orphelins d'une ancienne version) :
+; _internal est le moteur Python des versions 1.x.
 Type: filesandordirs; Name: "{app}\_internal"
+Type: filesandordirs; Name: "{app}\licenses"
 
 [Files]
 Source: "..\dist\Debarras\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -68,6 +70,31 @@ Type: dirifempty; Name: "{app}\licenses"
 Type: dirifempty; Name: "{app}"
 
 [Code]
+const
+  WebView2Key = 'Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
+
+// L'interface de Débarras 2 s'affiche avec WebView2 (Microsoft Edge), présent sur Windows 11 et
+// sur presque tous les Windows 10.
+function WebView2Installed: Boolean;
+var
+  V: String;
+begin
+  Result := (RegQueryStringValue(HKLM, 'SOFTWARE\WOW6432Node\' + WebView2Key, 'pv', V) and (V <> '') and (V <> '0.0.0.0'))
+    or (RegQueryStringValue(HKCU, 'Software\' + WebView2Key, 'pv', V) and (V <> '') and (V <> '0.0.0.0'));
+end;
+
+function InitializeSetup: Boolean;
+var
+  Code: Integer;
+begin
+  Result := True;
+  if not WebView2Installed and not WizardSilent then
+    if MsgBox('Débarras a besoin de Microsoft Edge WebView2, absent de ce PC.' + #13#10 +
+              'Ouvrir la page de téléchargement de Microsoft ? Installez-le, puis lancez Débarras.',
+              mbConfirmation, MB_YESNO) = IDYES then
+      ShellExec('open', 'https://developer.microsoft.com/microsoft-edge/webview2/', '', '', SW_SHOWNORMAL, ewNoWait, Code);
+end;
+
 // Désinstallation : propose (sans l'imposer) d'effacer aussi cache, paramètres et journal.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var

@@ -1,0 +1,28 @@
+[package]
+name = "debarras"
+version = "2.0.0"
+description = "Voir ce qui encombre le disque, et s'en débarrasser sans risque"
+authors = ["Captain-VII"]
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "debarras_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+base64 = "0.22"
+debarras-core = { path = "../debarras-core" }
+image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "tiff", "webp"] }
+rusqlite = "0.37"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+
+[dev-dependencies]
+tempfile = "3"

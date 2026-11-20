@@ -10,22 +10,23 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  rust:
     # Windows : corbeille, lecteurs et chemins Windows sont testés pour de vrai
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-node@v4
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: requirements*.txt
-
-      - name: Installer les dépendances
+          node-version: 22
+          cache: npm
+      - name: Interface (types et build, requis par la compilation de Tauri)
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest
-
+          npm ci
+          npm run build
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
       - name: Tests
-        run: python -m pytest -q
+        run: cargo test

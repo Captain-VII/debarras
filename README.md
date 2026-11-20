@@ -3,7 +3,7 @@
 <img src="assets/icon.png" width="96" align="right" alt="Logo de Débarras">
 
 **Voir ce qui encombre le disque, et s'en débarrasser sans risque.** Application Windows
-(Python, PySide6) d'analyse et de nettoyage de disque.
+(Rust, Tauri) d'analyse et de nettoyage de disque, légère : 5 Mo à télécharger.
 
 - **Simple** : l'accueil liste les disques du PC — un clic pour analyser, un clic pour
   **nettoyer automatiquement** ce qui est recréé sans contrepartie. Les outils détaillés
@@ -47,7 +47,7 @@ des shaders ; Windows Update via l'outil de Windows. Tout passe par la corbeille
 
 <img src="docs/screenshots/confirmation.png" width="560" alt="Confirmation avant de mettre un jeu à la corbeille">
 
-<sub>Captures réalisées sur un disque de démonstration fictif (`tools/make_screenshots.py`).</sub>
+<sub>Captures réalisées sur un disque de démonstration fictif (`tools/make_screenshots.ps1`).</sub>
 
 ## Installation
 
@@ -56,6 +56,9 @@ Téléchargez `Debarras-<version>-setup.exe` depuis la page
 votre compte, sans droits administrateur, avec raccourci, entrée dans *Applications installées*
 et désinstalleur. Version portable : `Debarras-<version>-win64.zip`, à décompresser où vous
 voulez. Les données (cache, journal, paramètres) sont dans `%LOCALAPPDATA%\Debarras`.
+
+L'interface s'affiche avec Microsoft Edge WebView2, présent sur Windows 11 et sur presque
+tous les Windows 10 ; s'il manque, l'installateur propose de le télécharger.
 
 L'exécutable n'est pas signé : au premier lancement, Windows SmartScreen peut demander
 *Informations complémentaires › Exécuter quand même*.
@@ -68,24 +71,34 @@ désactive dans *Fichier › Paramètres*.
 
 ## Développement
 
+Prérequis : [Rust](https://rustup.rs) (stable), [Node.js](https://nodejs.org) 22 ou plus.
+
 ```powershell
-python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements-dev.txt
-.venv\Scripts\python main.py          # lancer
-.venv\Scripts\python -m pytest        # tests
+npm ci                                   # dépendances de l'interface
+npx tauri dev                            # lancer (interface rechargée à chaud)
+cargo test; cargo clippy --all-targets -- -D warnings   # tests et lint (moteur et couche Tauri)
+npx tsc --noEmit -p .                    # types de l'interface
 powershell -ExecutionPolicy Bypass -File build.ps1     # exe dans dist\Debarras + installateur
 powershell -ExecutionPolicy Bypass -File release.ps1   # archive et installateur de release (+ -Publish)
 ```
 
-Captures du README : `.venv\Scripts\python tools\make_screenshots.py` (disque de démonstration
-fictif en fichiers creux, monté sur une lettre libre ; rien n'est lu ni écrit chez vous).
+Captures du README : `powershell -ExecutionPolicy Bypass -File tools\make_screenshots.ps1`
+(disque de démonstration fictif en fichiers creux, monté sur une lettre libre ; rien n'est lu ni
+écrit chez vous).
 
 L'installateur est construit avec [Inno Setup 6](https://jrsoftware.org/isinfo.php)
 (`installer/debarras.iss`) s'il est présent.
 
-Structure : `core/` (scan, cache SQLite, sécurité, nettoyage, doublons, images similaires,
-stats, actions, historique, mise à jour), `ui/` (fenêtre et onglets PySide6), `utils/` (formats, exports),
-`tests/` (pytest).
+Structure :
+- `debarras-core/` : le moteur, sans interface (scan, cache SQLite, classement de sécurité,
+  nettoyage, doublons, images similaires, même nom, statistiques, actions, historique,
+  recherche, mise à jour). `tests/golden/` : sorties de référence de la 1.6.3 sur un faux
+  disque, que le moteur doit reproduire.
+- `src-tauri/` : une commande par action de l'interface, progression et annulation.
+- `src/` : l'interface en TypeScript, sans framework (vues, treemap sur canvas, graphiques SVG).
+
+Jusqu'à la 1.6.3, Débarras était écrit en Python (PySide6) : ce code reste dans l'historique git
+et sur la branche des versions 1.x.
 
 ## Licence
 
