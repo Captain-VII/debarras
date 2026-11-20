@@ -31,10 +31,18 @@ jobs:
         run: python -m pytest -q
 
   rust:
-    # Cœur Rust (portage en cours) : mêmes chemins Windows que l'appli
+    # Version Rust + Tauri (portage en cours) : mêmes chemins Windows que l'appli
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Interface (types et build, requis par la compilation de Tauri)
+        run: |
+          npm ci
+          npm run build
       - uses: Swatinem/rust-cache@v2
       - name: Format
         run: cargo fmt --check
