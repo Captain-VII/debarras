@@ -1,6 +1,6 @@
 # Journal des versions
 
-## 2.0.0 — à paraître
+## 2.0.0 — 2026-11-20
 
 - **Débarras réécrit en Rust** (moteur) **et Tauri** (fenêtre) : mêmes fonctions et mêmes
   garde-fous, mais une application bien plus légère et rapide.
