@@ -1058,6 +1058,13 @@ async fn update_install(app: AppHandle) -> Result<bool, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Plantage : la cause est gardée dans crash.log (la version publiée n'a pas de console).
+    if let Ok(db) = default_db_path() {
+        let log = db.with_file_name("crash.log");
+        std::panic::set_hook(Box::new(move |info| {
+            let _ = std::fs::write(&log, format!("Débarras {VERSION} : {info}\n"));
+        }));
+    }
     updater::cleanup_after_update(VERSION); // restes d'une mise à jour déjà installée
     let state = match App::new() {
         Ok(s) => s,
