@@ -1,6 +1,6 @@
 [package]
 name = "debarras"
-version = "2.0.0"
+version = "2.0.1"
 description = "Voir ce qui encombre le disque, et s'en débarrasser sans risque"
 authors = ["Captain-VII"]
 edition.workspace = true

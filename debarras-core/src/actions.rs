@@ -960,7 +960,7 @@ mod tests {
             [Status::Done, Status::Done]
         );
         let mut zf = zip::ZipArchive::new(fs::File::open(&z).unwrap()).unwrap();
-        let mut names: Vec<String> = zf.file_names().map(String::from).collect();
+        let mut names: Vec<String> = zf.file_names().map(|n| n.unwrap().into_owned()).collect();
         names.sort();
         assert_eq!(names, ["a.txt", "d/b.txt"]);
         let mut content = String::new();
