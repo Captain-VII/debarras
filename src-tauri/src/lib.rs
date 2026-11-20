@@ -1184,7 +1184,9 @@ mod tests {
         assert_eq!(vrac["k"].as_array().unwrap().len(), 3);
         assert_eq!(vrac["x"], json!([2, 201])); // 0.txt (100) et 1.txt (101) regroupés
         assert_eq!(t["k"][0]["k"][0]["k"][0]["n"], "f.bin"); // détaillé en profondeur
-        assert_eq!(t["k"][0]["l"], "cleanable"); // sous %TEMP%
+        // Niveau du classement courant (le dossier temporaire peut être en nom court 8.3).
+        let gros = t["k"][0]["p"].as_str().unwrap();
+        assert_eq!(t["k"][0]["l"], level(clf.classify(gros, Some(true)).level));
         // Budget épuisé : les dossiers restants ne sont pas détaillés.
         let small = build_tree(&c, &clf, res.scan_id, &r, 2, 3).unwrap();
         assert!(small["k"][0].get("k").is_none());
