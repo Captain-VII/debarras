@@ -1,5 +1,12 @@
 # Journal des versions
 
+## 2.0.1 — 2026-11-20
+
+- **Sécurité** : la bibliothèque de lecture et d'écriture des archives ZIP (utilisée par la
+  mise à jour automatique et par l'action *Archiver*) passe à sa dernière version, qui corrige
+  plusieurs failles signalées sur les archives piégées. Les archives de mise à jour étaient
+  déjà vérifiées par empreinte SHA-256 avant d'être ouvertes ; aucun changement visible.
+
 ## 2.0.0 — 2026-11-20
 
 - **Débarras réécrit en Rust** (moteur) **et Tauri** (fenêtre) : mêmes fonctions et mêmes

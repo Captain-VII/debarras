@@ -52,7 +52,7 @@ impl Fixture {
                 .unwrap();
         for i in 0..zip.len() {
             let mut f = zip.by_index(i).unwrap();
-            let rel = f.name().replace('/', "\\");
+            let rel = f.name().unwrap().replace('/', "\\");
             let path = disk.join(&rel);
             fs::create_dir_all(path.parent().unwrap()).unwrap();
             let mut out = fs::File::create(&path).unwrap();
