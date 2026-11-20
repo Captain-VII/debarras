@@ -1,5 +1,25 @@
 # Journal des versions
 
+## 2.0.0 — à paraître
+
+- **Débarras réécrit en Rust** (moteur) **et Tauri** (fenêtre) : mêmes fonctions et mêmes
+  garde-fous, mais une application bien plus légère et rapide.
+  - Téléchargement de 5 Mo au lieu de 37 Mo, 11 Mo installés au lieu de 141 Mo.
+  - Analyse d'un disque 3 à 5 fois plus rapide (C: complet en 3,5 s au lieu de 10 à 17 s),
+    images similaires presque 2 fois plus vite.
+- **Rien à refaire** : la 1.6 installe la 2.0 comme une mise à jour ordinaire. Historique des
+  scans, empreintes des doublons, paramètres et journal des actions sont conservés ; seules
+  les empreintes des images sont recalculées une fois.
+- **Fichiers système de la racine protégés** : le contenu des dossiers système à la racine du
+  disque (`Recovery`, `Boot`, `System Volume Information`…) était classé *Vos fichiers* ; il est
+  désormais *Système*, donc jamais supprimable.
+- **Annulation plus fiable** : sur un disque où Windows utilise des noms courts (`PROGRA~1`),
+  une mise à la corbeille pouvait ne pas être annulable ; c'est corrigé.
+- **Moins de restes** : le dossier de secours `Debarras.old`, laissé par chaque mise à jour, est
+  supprimé au démarrage de la nouvelle version.
+- Nécessite Microsoft Edge WebView2 (présent sur Windows 11 et presque tous les Windows 10) ;
+  l'installateur le vérifie.
+
 ## 1.6.3 — 2026-11-10
 
 - **Code réorganisé, sans changement visible** : les recherches de doublons, d'images

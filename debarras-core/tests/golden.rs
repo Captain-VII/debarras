@@ -1,5 +1,6 @@
 //! Compare le cœur Rust aux sorties de référence de la version Python (`tests/golden/`,
-//! produites par `tools/make_golden.py`) : même faux disque, monté sur une lettre libre.
+//! produites par `tools/make_golden.py` de la 1.6.3, retiré avec la 2.0 : voir l'historique git) :
+//! même faux disque, monté sur une lettre libre.
 
 use std::fs;
 use std::path::{Path, PathBuf};
