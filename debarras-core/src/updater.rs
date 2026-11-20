@@ -179,6 +179,12 @@ pub fn fetch_latest(repo: &str, api: &str, current: &str) -> Result<Option<Relea
     Ok(None)
 }
 
+/// Mise à jour à proposer : la dernière release si elle est plus récente que `current`
+/// (ce que faisait `UpdateChecker` en 1.6.x), sinon `None`.
+pub fn check(repo: &str, api: &str, current: &str) -> Result<Option<Release>, UpdateError> {
+    Ok(fetch_latest(repo, api, current)?.filter(|r| is_newer(&r.version, current)))
+}
+
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
@@ -687,6 +693,13 @@ mod tests {
             Some(hex(&Sha256::digest(b"zip")).as_str())
         );
         assert!(rel.notes.contains("Nouveautés"));
+        // Version déjà installée ou plus ancienne : rien à proposer.
+        assert!(check("me/app", &gh.base, "9.1.0").unwrap().is_none());
+        assert!(check("me/app", &gh.base, "10.0").unwrap().is_none());
+        assert_eq!(
+            check("me/app", &gh.base, "9.0.9").unwrap().unwrap().version,
+            "9.1.0"
+        );
 
         let payload = make_zip(&[("Debarras/Debarras.exe", b"new")]);
         let dl = |rel: &Release, dir: &str| {
