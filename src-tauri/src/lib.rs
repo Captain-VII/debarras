@@ -950,12 +950,11 @@ fn remember_check(st: &App) {
     let _ = s.save(&Settings::path(&st.db));
 }
 
-/// Dernière version publiée si elle est plus récente (`null` sinon).
+/// Dernière version publiée si elle est plus récente que celle-ci (`null` sinon).
 #[tauri::command]
 async fn update_check(app: AppHandle, task: String) -> Res {
     job(app, task, move |st, _, _| {
-        let rel =
-            updater::fetch_latest(updater::GITHUB_REPO, &updater::api(), VERSION).map_err(err)?;
+        let rel = updater::check(updater::GITHUB_REPO, &updater::api(), VERSION).map_err(err)?;
         remember_check(st);
         let out = rel.as_ref().map(|r| {
             json!({
