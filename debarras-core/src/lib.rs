@@ -17,5 +17,7 @@ pub mod scanner;
 pub mod search;
 pub mod similar;
 pub mod stats;
+pub mod updater;
+
 #[cfg(test)]
 mod testutil;
